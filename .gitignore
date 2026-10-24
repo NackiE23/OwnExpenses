@@ -17,3 +17,8 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+
+# Release signing: the key and its passwords never go to git
+keystore.properties
+*.jks
+*.keystore
