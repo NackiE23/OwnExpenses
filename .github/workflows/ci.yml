@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      # Matches gradle/gradle-daemon-jvm.properties so Gradle does not download another JDK.
+      - uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
+
+      - name: Check formatting
+        run: ./gradlew spotlessCheck
+
+      - name: Unit tests
+        run: ./gradlew :shared:testAndroidHostTest
+
+      - name: Android lint
+        run: ./gradlew :androidApp:lintDebug
+
+      # Compiles iOS klibs (no linking, no Xcode) so shared code keeps working for stage 5.
+      - name: iOS compile check
+        run: ./gradlew :shared:compileKotlinIosArm64 :sharedUi:compileKotlinIosArm64
+
+      - name: Assemble
+        run: ./gradlew :androidApp:assembleDebug :androidApp:assembleRelease
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reports
+          path: |
+            **/build/reports/
+            **/build/test-results/
+          retention-days: 7

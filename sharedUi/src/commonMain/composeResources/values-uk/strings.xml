@@ -1,0 +1,8 @@
+<resources>
+    <string name="tab_categories">Категорії</string>
+    <string name="tab_operations">Операції</string>
+    <string name="tab_statistics">Статистика</string>
+    <string name="tab_more">Більше</string>
+
+    <string name="placeholder_coming_soon">Незабаром</string>
+</resources>

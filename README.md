@@ -1,31 +1,33 @@
-This is a Kotlin Multiplatform project targeting Android, iOS.
+# OwnExpenses
 
-* [/iosApp](./iosApp/iosApp) contains an iOS application. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+Personal offline expense tracker for Android: record an expense in 2–3 taps and always see the balance. Local database only, no accounts, no network. iOS comes later from the same Kotlin Multiplatform codebase.
 
-* [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./shared/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
+Requirements and decisions: [docs/TZ.md](docs/TZ.md) (Ukrainian).
 
-### Running the apps
+## Modules
 
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
+| Module | Contents |
+| --- | --- |
+| `androidApp` | Android shell: `Application` (Koin start), `MainActivity`, manifest, widget later |
+| `sharedUi` | Compose Multiplatform screens, theme, navigation, uk/en strings |
+| `shared` | Domain models, Room database, DataStore settings, repositories, ViewModels, CSV |
 
-- Android app: `./gradlew :androidApp:assembleDebug`
-- iOS app: open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+Dependency direction: `androidApp → sharedUi → shared`.
 
-### Running tests
+## Stack
 
-Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
+Kotlin Multiplatform, Compose Multiplatform, Room (KMP, bundled SQLite), DataStore, Koin, Navigation Compose, kotlinx-datetime. Versions live in [gradle/libs.versions.toml](gradle/libs.versions.toml).
 
-- Android tests: `./gradlew :shared:testAndroidHostTest`
-- iOS tests: `./gradlew :shared:iosSimulatorArm64Test`
+## Commands
 
----
+```
+./gradlew :androidApp:assembleDebug
+./gradlew :shared:testAndroidHostTest
+./gradlew spotlessCheck          # spotlessApply to fix
+./gradlew :androidApp:lintDebug
+./gradlew :shared:compileKotlinIosArm64 :sharedUi:compileKotlinIosArm64
+```
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+`shared` and `sharedUi` already target iOS (`iosArm64`, `iosSimulatorArm64`); the Xcode project arrives at stage 5.
+
+CI runs the same set on every push to `master` and on pull requests.

@@ -1,5 +1,7 @@
 rootProject.name = "OwnExpenses"
 
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
 pluginManagement {
     repositories {
         google {
@@ -15,6 +17,7 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
+    repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
     repositories {
         google {
             mavenContent {
@@ -29,3 +32,4 @@ dependencyResolutionManagement {
 
 include(":androidApp")
 include(":shared")
+include(":sharedUi")

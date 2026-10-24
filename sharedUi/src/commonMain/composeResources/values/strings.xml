@@ -1,0 +1,8 @@
+<resources>
+    <string name="tab_categories">Categories</string>
+    <string name="tab_operations">Operations</string>
+    <string name="tab_statistics">Statistics</string>
+    <string name="tab_more">More</string>
+
+    <string name="placeholder_coming_soon">Coming soon</string>
+</resources>
