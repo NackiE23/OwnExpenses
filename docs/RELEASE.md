@@ -6,7 +6,13 @@
 
 Ключ підтверджує, що оновлення від вас. Загубите ключ або пароль, і оновити встановлений застосунок уже не вийде: доведеться видалити його разом з даними й відновити з резервної копії. Тримайте файл ключа й пароль у менеджері паролів або іншому надійному місці поза комп'ютером.
 
-1. Створіть ключ (пароль вводиться в терміналі й ніде не зберігається):
+1. Створіть ключ (пароль вводиться в терміналі й ніде не зберігається). У PowerShell (термінал Android Studio на Windows):
+
+   ```powershell
+   New-Item -ItemType Directory -Force "$HOME\keys" | Out-Null; & "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe" -genkeypair -v -keystore "$HOME\keys\ownexpenses-release.jks" -alias ownexpenses -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Dmytro Varchuk, O=OwnExpenses, C=UA"
+   ```
+
+   У Git Bash:
 
    ```bash
    mkdir -p ~/keys && "/c/Program Files/Android/Android Studio/jbr/bin/keytool.exe" -genkeypair -v -keystore ~/keys/ownexpenses-release.jks -alias ownexpenses -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Dmytro Varchuk, O=OwnExpenses, C=UA"
@@ -26,6 +32,8 @@
    ```
 
 3. Готовий файл: `androidApp/build/outputs/apk/release/androidApp-release.apk`.
+
+APK зберігається в GitHub Releases: новий реліз з тегом версії (`v1.0.0`, `v1.1.0`…) і APK у вкладеннях. Тег прив’язаний до конкретного коміту, тож нові коміти в master на вже створений реліз не впливають.
 
 ## Встановлення на телефон
 
