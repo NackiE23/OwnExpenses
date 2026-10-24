@@ -81,6 +81,8 @@ import com.nackie.ownexpenses.ui.resources.restore_error_write
 import com.nackie.ownexpenses.ui.resources.restore_unknown_date
 import com.nackie.ownexpenses.ui.resources.restored
 import com.nackie.ownexpenses.ui.resources.settings_appearance
+import com.nackie.ownexpenses.ui.resources.settings_categories
+import com.nackie.ownexpenses.ui.resources.settings_categories_hint
 import com.nackie.ownexpenses.ui.resources.settings_csv_delimiter
 import com.nackie.ownexpenses.ui.resources.settings_csv_delimiter_hint
 import com.nackie.ownexpenses.ui.resources.settings_currency
@@ -103,6 +105,7 @@ import org.koin.compose.viewmodel.koinViewModel
 /** "More" tab: theme, CSV delimiter, currency (fixed), language note, CSV export and backups. */
 @Composable
 internal fun MoreScreen(
+    onManageCategories: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = koinViewModel(),
 ) {
@@ -186,6 +189,7 @@ internal fun MoreScreen(
             state = state,
             onThemeChange = viewModel::setThemeMode,
             onDelimiterChange = viewModel::setCsvDelimiter,
+            onManageCategories = onManageCategories,
             onExportClick = { dialog = MoreDialog.EXPORT },
             onBackupClick = { dialog = MoreDialog.BACKUP },
             onRestoreClick = {
@@ -245,6 +249,7 @@ private fun SettingsContent(
     state: SettingsUiState,
     onThemeChange: (ThemeMode) -> Unit,
     onDelimiterChange: (CsvDelimiter) -> Unit,
+    onManageCategories: () -> Unit,
     onExportClick: () -> Unit,
     onBackupClick: () -> Unit,
     onRestoreClick: () -> Unit,
@@ -266,6 +271,12 @@ private fun SettingsContent(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
         SectionTitle(stringResource(Res.string.settings_data))
+        ActionItem(
+            Res.string.settings_categories,
+            Res.string.settings_categories_hint,
+            enabled = true,
+            onClick = onManageCategories,
+        )
         ListItem(
             headlineContent = { Text(stringResource(Res.string.settings_currency)) },
             supportingContent = { Text(stringResource(Res.string.settings_currency_value)) },

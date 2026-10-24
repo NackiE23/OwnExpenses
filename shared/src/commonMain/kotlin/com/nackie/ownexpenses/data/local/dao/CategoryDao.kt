@@ -34,6 +34,15 @@ internal interface CategoryDao {
     @Query("DELETE FROM categories")
     suspend fun deleteAll()
 
+    @Query("SELECT * FROM categories WHERE parent_id = :parentId ORDER BY sort_order, id")
+    suspend fun getSubcategories(parentId: Long): List<CategoryEntity>
+
+    @Query("UPDATE categories SET sort_order = :sortOrder WHERE id = :id")
+    suspend fun updateSortOrder(
+        id: Long,
+        sortOrder: Int,
+    )
+
     @Query("SELECT COUNT(*) FROM categories")
     suspend fun count(): Int
 

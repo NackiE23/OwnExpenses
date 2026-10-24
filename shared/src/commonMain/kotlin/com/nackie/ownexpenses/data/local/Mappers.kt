@@ -41,3 +41,15 @@ internal fun Transaction.toEntity(): TransactionEntity =
         createdAt = createdAt.toEpochMilliseconds(),
         updatedAt = updatedAt.toEpochMilliseconds(),
     )
+
+internal fun Category.toEntity(): CategoryEntity =
+    CategoryEntity(
+        id = id,
+        parentId = parentId,
+        name = name,
+        type = type,
+        color = color,
+        icon = icon,
+        sortOrder = sortOrder,
+        isArchived = isArchived,
+    )

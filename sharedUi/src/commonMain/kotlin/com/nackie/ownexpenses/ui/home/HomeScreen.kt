@@ -2,6 +2,7 @@ package com.nackie.ownexpenses.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -17,6 +19,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
@@ -51,16 +55,22 @@ import com.nackie.ownexpenses.ui.quickentry.QuickEntryHost
 import com.nackie.ownexpenses.ui.quickentry.UndoSnackbarHost
 import com.nackie.ownexpenses.ui.resources.Res
 import com.nackie.ownexpenses.ui.resources.balance_title
+import com.nackie.ownexpenses.ui.resources.home_add_category
+import com.nackie.ownexpenses.ui.resources.home_edit_categories
 import com.nackie.ownexpenses.ui.resources.home_no_categories
+import com.nackie.ownexpenses.ui.resources.ic_add
+import com.nackie.ownexpenses.ui.resources.ic_edit
 import com.nackie.ownexpenses.ui.resources.type_expenses
 import com.nackie.ownexpenses.ui.resources.type_incomes
 import com.nackie.ownexpenses.ui.theme.OwnExpensesTheme
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /** Main tab: balance, period, expense/income switch and category tiles that open quick entry. */
 @Composable
 internal fun HomeScreen(
+    onManageCategories: (type: TransactionType, create: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     homeViewModel: HomeViewModel = koinViewModel(),
     quickEntryViewModel: QuickEntryViewModel = koinViewModel(),
@@ -82,6 +92,7 @@ internal fun HomeScreen(
             onSelectPeriod = homeViewModel::selectPeriod,
             onSelectType = homeViewModel::selectType,
             onTileClick = quickEntryViewModel::open,
+            onManageCategories = { create -> onManageCategories(state.selectedType, create) },
             modifier = Modifier.padding(innerPadding),
         )
     }
@@ -98,6 +109,7 @@ private fun HomeContent(
     onSelectPeriod: (Period) -> Unit,
     onSelectType: (TransactionType) -> Unit,
     onTileClick: (CategoryWithSubcategories) -> Unit,
+    onManageCategories: (create: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyVerticalGrid(
@@ -109,7 +121,12 @@ private fun HomeContent(
     ) {
         item(key = "header", span = { GridItemSpan(maxLineSpan) }) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                BalanceHeader(balanceMinor = state.balanceMinor, formatter = formatter)
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    BalanceHeader(balanceMinor = state.balanceMinor, formatter = formatter)
+                    IconButton(onClick = { onManageCategories(false) }, modifier = Modifier.align(Alignment.TopEnd)) {
+                        Icon(painterResource(Res.drawable.ic_edit), stringResource(Res.string.home_edit_categories))
+                    }
+                }
                 PeriodSwitcher(
                     period = state.period,
                     today = state.today,
@@ -144,6 +161,9 @@ private fun HomeContent(
                 onClick = { onTileClick(tile.category) },
                 modifier = Modifier.animateItem(),
             )
+        }
+        if (!state.isLoading) {
+            item(key = "add") { AddCategoryTile(onClick = { onManageCategories(true) }) }
         }
     }
 }
@@ -273,6 +293,36 @@ private fun CategoryTileCard(
                     maxLines = 1,
                 )
             }
+        }
+    }
+}
+
+/** Last tile: opens the categories screen with the editor for a new category of this type. */
+@Composable
+private fun AddCategoryTile(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedCard(onClick = onClick, modifier = modifier) {
+        Row(
+            modifier = Modifier.padding(12.dp).heightIn(min = 48.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(44.dp)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(painterResource(Res.drawable.ic_add), contentDescription = null)
+            }
+            Text(
+                text = stringResource(Res.string.home_add_category),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

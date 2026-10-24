@@ -69,13 +69,13 @@ internal class HomeViewModelTest : MainDispatcherTest() {
                 assertEquals(500_00, state.balanceMinor)
                 assertEquals(Period.monthOf(LocalDate(2026, 10, 1)), state.period)
                 assertEquals(PeriodTotals(expenseMinor = 500_00, incomeMinor = 0), state.totals)
-                // Transport was used twice (once via Taxi), Groceries once, Cafe never.
-                assertEquals(listOf("Transport", "Groceries", "Cafe"), state.tiles.map { it.category.category.name })
-                assertEquals(listOf(200_00L, 300_00L, 0L), state.tiles.map { it.totalMinor })
+                // The user's order, however much each category was used.
+                assertEquals(listOf("Groceries", "Cafe", "Transport"), state.tiles.map { it.category.category.name })
+                assertEquals(listOf(300_00L, 0L, 200_00L), state.tiles.map { it.totalMinor })
                 assertEquals(
                     listOf("Taxi"),
                     state.tiles
-                        .first()
+                        .last()
                         .category.subcategories
                         .map { it.name },
                 )

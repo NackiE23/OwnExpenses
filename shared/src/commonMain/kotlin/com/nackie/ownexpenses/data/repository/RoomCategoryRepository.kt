@@ -5,6 +5,7 @@ import androidx.room.useWriterConnection
 import com.nackie.ownexpenses.data.local.AppDatabase
 import com.nackie.ownexpenses.data.local.entity.CategoryEntity
 import com.nackie.ownexpenses.data.local.toDomain
+import com.nackie.ownexpenses.data.local.toEntity
 import com.nackie.ownexpenses.domain.model.Category
 import com.nackie.ownexpenses.domain.model.CategoryRemoval
 import com.nackie.ownexpenses.domain.model.CategoryWithSubcategories
@@ -78,14 +79,36 @@ internal class RoomCategoryRepository(
                 val category = requireNotNull(dao.getById(id)) { "Category $id not found" }
                 if (dao.hasTransactions(id)) {
                     dao.update(category.copy(isArchived = true))
-                    CategoryRemoval.ARCHIVED
+                    CategoryRemoval.Archived
                 } else {
+                    val removed = listOf(category) + dao.getSubcategories(id)
                     dao.deleteSubcategories(id)
                     dao.delete(id)
-                    CategoryRemoval.DELETED
+                    CategoryRemoval.Deleted(removed.map { it.toDomain() })
                 }
             }
         }
+
+    override suspend fun restoreCategories(categories: List<Category>) {
+        database.useWriterConnection { connection ->
+            connection.immediateTransaction {
+                // Parents first, so the parent key holds at every insert.
+                dao.insertAll(categories.sortedBy { it.parentId != null }.map { it.toEntity() })
+            }
+        }
+    }
+
+    override suspend fun reorder(orderedIds: List<Long>) {
+        database.useWriterConnection { connection ->
+            connection.immediateTransaction {
+                val siblings = orderedIds.map { id -> requireNotNull(dao.getById(id)) { "Category $id not found" } }
+                require(siblings.map { it.parentId to it.type }.distinct().size <= 1) {
+                    "Only categories of one level and type can be reordered together"
+                }
+                orderedIds.forEachIndexed { index, id -> dao.updateSortOrder(id, index) }
+            }
+        }
+    }
 
     private suspend fun modify(
         id: Long,

@@ -15,6 +15,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -119,9 +120,14 @@ class CategoryRepositoryTest {
             val transport = create("Transport")
             val taxi = create("Taxi", parentId = transport)
 
-            assertEquals(CategoryRemoval.DELETED, repository.removeCategory(transport))
+            val removal = assertIs<CategoryRemoval.Deleted>(repository.removeCategory(transport))
+            assertEquals(listOf("Transport", "Taxi"), removal.removed.map { it.name })
             assertNull(repository.getCategory(transport))
             assertNull(repository.getCategory(taxi))
+
+            // Undo puts both back with their ids, order and colors.
+            repository.restoreCategories(removal.removed)
+            assertEquals(removal.removed, listOf(transport, taxi).map { repository.getCategory(it) })
         }
 
     @Test
@@ -131,9 +137,35 @@ class CategoryRepositoryTest {
             val taxi = create("Taxi", parentId = transport)
             transactions.addTransaction(TransactionInput(taxi, 150_00, LocalDate(2026, 10, 9)))
 
-            assertEquals(CategoryRemoval.ARCHIVED, repository.removeCategory(transport))
+            assertEquals(CategoryRemoval.Archived, repository.removeCategory(transport))
             assertEquals(true, repository.getCategory(transport)?.isArchived)
             assertNotNull(repository.getCategory(taxi))
+        }
+
+    @Test
+    fun reorderSetsTheOrderOfSiblings() =
+        runTest {
+            val food = create("Food")
+            val transport = create("Transport")
+            val cafe = create("Cafe")
+            val taxi = create("Taxi", parentId = transport)
+            val bus = create("Bus", parentId = transport)
+
+            repository.reorder(listOf(cafe, food, transport))
+            repository.reorder(listOf(bus, taxi))
+
+            val tree = repository.observeCategories(TransactionType.EXPENSE).first()
+            assertEquals(listOf("Cafe", "Food", "Transport"), tree.map { it.category.name })
+            assertEquals(listOf("Bus", "Taxi"), tree.last().subcategories.map { it.name })
+        }
+
+    @Test
+    fun reorderRejectsMixedLevels() =
+        runTest {
+            val transport = create("Transport")
+            val taxi = create("Taxi", parentId = transport)
+
+            assertFailsWith<IllegalArgumentException> { repository.reorder(listOf(taxi, transport)) }
         }
 
     private suspend fun create(

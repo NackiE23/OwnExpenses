@@ -1,0 +1,32 @@
+<resources>
+    <string name="categories_title">Категорії</string>
+    <string name="categories_back">Назад</string>
+    <string name="categories_create">Створити категорію</string>
+    <string name="categories_add_subcategory">Додати підкатегорію</string>
+    <string name="categories_edit">Редагувати</string>
+    <string name="categories_move_up">Вище</string>
+    <string name="categories_move_down">Нижче</string>
+    <string name="categories_archive">В архів</string>
+    <string name="categories_unarchive">Повернути з архіву</string>
+    <string name="categories_delete">Видалити</string>
+    <string name="categories_archive_section">Архів</string>
+    <string name="categories_archived_label">в архіві</string>
+    <string name="categories_more_actions">Інші дії</string>
+    <string name="categories_drag">Перетягніть, щоб змінити порядок</string>
+    <string name="categories_order_hint">Плитки на головному екрані стоять у цьому порядку. Тягніть за ручку, щоб змінити його.</string>
+    <string name="categories_deleted">Категорію «%1$s» видалено</string>
+    <string name="categories_archived_instead">«%1$s» має записи, тому перенесено в архів</string>
+
+    <string name="category_editor_new">Нова категорія</string>
+    <string name="category_editor_new_sub">Нова підкатегорія в «%1$s»</string>
+    <string name="category_editor_edit">Редагування категорії</string>
+    <string name="category_editor_name">Назва</string>
+    <string name="category_editor_color">Колір</string>
+    <string name="category_editor_icon">Іконка</string>
+    <string name="dialog_save">Зберегти</string>
+
+    <string name="home_edit_categories">Редагувати категорії</string>
+    <string name="home_add_category">Додати</string>
+    <string name="settings_categories">Категорії</string>
+    <string name="settings_categories_hint">Додати, змінити, впорядкувати, архівувати</string>
+</resources>

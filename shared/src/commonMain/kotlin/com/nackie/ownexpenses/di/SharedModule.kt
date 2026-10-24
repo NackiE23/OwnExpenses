@@ -16,6 +16,7 @@ import com.nackie.ownexpenses.domain.repository.CategoryRepository
 import com.nackie.ownexpenses.domain.repository.SettingsRepository
 import com.nackie.ownexpenses.domain.repository.TransactionRepository
 import com.nackie.ownexpenses.presentation.AppViewModel
+import com.nackie.ownexpenses.presentation.categories.CategoriesViewModel
 import com.nackie.ownexpenses.presentation.history.HistoryViewModel
 import com.nackie.ownexpenses.presentation.home.HomeViewModel
 import com.nackie.ownexpenses.presentation.quickentry.QuickEntryViewModel
@@ -59,6 +60,7 @@ val sharedModule: Module =
         viewModelOf(::HistoryViewModel)
         viewModelOf(::SettingsViewModel)
         viewModelOf(::StatisticsViewModel)
+        viewModelOf(::CategoriesViewModel)
         viewModelOf(::AppViewModel)
     }
 

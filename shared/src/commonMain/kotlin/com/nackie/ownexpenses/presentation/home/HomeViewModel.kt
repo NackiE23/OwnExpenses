@@ -20,9 +20,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.minus
 
 data class HomeUiState(
     val balanceMinor: Long = 0,
@@ -64,11 +62,10 @@ class HomeViewModel(
         )
 
     private val tiles: Flow<List<CategoryTile>> =
-        combine(selectedType, periodSelection.period, today, ::TileQuery).flatMapLatest { query ->
+        combine(selectedType, periodSelection.period, ::TileQuery).flatMapLatest { query ->
             combine(
                 categoryRepository.observeCategories(query.type),
                 transactionRepository.observeCategoryTotals(query.type, query.period),
-                transactionRepository.observeCategoryUsage(usageWindow(query.today)),
                 ::buildTiles,
             )
         }
@@ -103,7 +100,6 @@ class HomeViewModel(
     private data class TileQuery(
         val type: TransactionType,
         val period: Period,
-        val today: LocalDate,
     )
 
     private companion object {
@@ -111,21 +107,8 @@ class HomeViewModel(
     }
 }
 
-/** Tile order is based on how often each category was used in the last [USAGE_WINDOW_DAYS] days. */
-internal const val USAGE_WINDOW_DAYS = 30
-
-internal fun usageWindow(today: LocalDate): Period =
-    Period.Custom(today.minus(USAGE_WINDOW_DAYS - 1, DateTimeUnit.DAY), today)
-
-/**
- * Most used categories first; ties (including never used ones) keep the user's own order.
- * [categories] arrive already in that order.
- */
+/** Tiles keep the user's own category order (set on the categories screen), never reshuffled. */
 internal fun buildTiles(
     categories: List<CategoryWithSubcategories>,
     totals: Map<Long, Long>,
-    usage: Map<Long, Long>,
-): List<CategoryTile> =
-    categories
-        .sortedByDescending { usage[it.category.id] ?: 0 }
-        .map { CategoryTile(it, totals[it.category.id] ?: 0) }
+): List<CategoryTile> = categories.map { CategoryTile(it, totals[it.category.id] ?: 0) }

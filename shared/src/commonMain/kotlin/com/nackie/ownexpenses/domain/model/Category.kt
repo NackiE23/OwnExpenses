@@ -35,7 +35,12 @@ data class NewCategory(
 )
 
 /** Outcome of removing a category: categories that have records are archived, not deleted. */
-enum class CategoryRemoval {
-    DELETED,
-    ARCHIVED,
+sealed interface CategoryRemoval {
+    /** Gone with its subcategories; [removed] can be put back with `restoreCategories` (undo). */
+    data class Deleted(
+        val removed: List<Category>,
+    ) : CategoryRemoval
+
+    /** Kept, but hidden, so the history of its records stays intact. */
+    data object Archived : CategoryRemoval
 }

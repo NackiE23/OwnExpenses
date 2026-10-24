@@ -1,0 +1,34 @@
+<resources>
+    <string name="categories_title">Categories</string>
+    <string name="categories_back">Back</string>
+    <string name="categories_create">Create a category</string>
+    <string name="categories_add_subcategory">Add subcategory</string>
+    <string name="categories_edit">Edit</string>
+    <string name="categories_move_up">Move up</string>
+    <string name="categories_move_down">Move down</string>
+    <string name="categories_archive">Archive</string>
+    <string name="categories_unarchive">Restore from archive</string>
+    <string name="categories_delete">Delete</string>
+    <string name="categories_archive_section">Archive</string>
+    <string name="categories_archived_label">archived</string>
+    <string name="categories_more_actions">More actions</string>
+    <string name="categories_drag">Drag to reorder</string>
+    <string name="categories_order_hint">Tiles on the main screen follow this order. Drag the handle to change it.</string>
+    <!-- %1$s category name -->
+    <string name="categories_deleted">Category %1$s deleted</string>
+    <string name="categories_archived_instead">%1$s has records, so it was moved to the archive</string>
+
+    <string name="category_editor_new">New category</string>
+    <!-- %1$s parent category -->
+    <string name="category_editor_new_sub">New subcategory in %1$s</string>
+    <string name="category_editor_edit">Edit category</string>
+    <string name="category_editor_name">Name</string>
+    <string name="category_editor_color">Color</string>
+    <string name="category_editor_icon">Icon</string>
+    <string name="dialog_save">Save</string>
+
+    <string name="home_edit_categories">Edit categories</string>
+    <string name="home_add_category">Add</string>
+    <string name="settings_categories">Categories</string>
+    <string name="settings_categories_hint">Add, edit, reorder, archive</string>
+</resources>

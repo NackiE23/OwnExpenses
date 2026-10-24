@@ -23,11 +23,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.nackie.ownexpenses.domain.model.ThemeMode
+import com.nackie.ownexpenses.domain.model.TransactionType
 import com.nackie.ownexpenses.presentation.AppViewModel
+import com.nackie.ownexpenses.ui.categories.CategoriesScreen
 import com.nackie.ownexpenses.ui.home.HomeScreen
 import com.nackie.ownexpenses.ui.more.MoreScreen
 import com.nackie.ownexpenses.ui.navigation.CategoriesRoute
+import com.nackie.ownexpenses.ui.navigation.ManageCategoriesRoute
 import com.nackie.ownexpenses.ui.navigation.MoreRoute
 import com.nackie.ownexpenses.ui.navigation.OperationsRoute
 import com.nackie.ownexpenses.ui.navigation.StatisticsRoute
@@ -63,13 +67,19 @@ fun App(
         val navController = rememberNavController()
         val backStackEntry by navController.currentBackStackEntryAsState()
 
+        val destination = backStackEntry?.destination
+        // Tabs show the bottom bar; screens above them (categories) have their own back arrow.
+        val onTab = TopLevelDestination.entries.any { tab -> destination?.hasRoute(tab.route::class) == true }
+        val openCategories = { type: TransactionType, create: Boolean ->
+            navController.navigate(ManageCategoriesRoute(type.name, create))
+        }
+
         Scaffold(
             modifier = modifier,
             bottomBar = {
-                BottomBar(
-                    currentDestination = backStackEntry?.destination,
-                    onNavigate = navController::navigateToTopLevel,
-                )
+                if (onTab) {
+                    BottomBar(currentDestination = destination, onNavigate = navController::navigateToTopLevel)
+                }
             },
         ) { innerPadding ->
             NavHost(
@@ -77,10 +87,22 @@ fun App(
                 startDestination = CategoriesRoute,
                 modifier = Modifier.padding(innerPadding),
             ) {
-                composable<CategoriesRoute> { HomeScreen() }
+                composable<CategoriesRoute> { HomeScreen(onManageCategories = openCategories) }
                 composable<OperationsRoute> { OperationsScreen() }
                 composable<StatisticsRoute> { StatisticsScreen() }
-                composable<MoreRoute> { MoreScreen() }
+                composable<MoreRoute> {
+                    MoreScreen(
+                        onManageCategories = { openCategories(TransactionType.EXPENSE, false) },
+                    )
+                }
+                composable<ManageCategoriesRoute> { entry ->
+                    val route = entry.toRoute<ManageCategoriesRoute>()
+                    CategoriesScreen(
+                        initialType = TransactionType.valueOf(route.type),
+                        startWithCreate = route.create,
+                        onBack = { navController.popBackStack() },
+                    )
+                }
             }
         }
     }

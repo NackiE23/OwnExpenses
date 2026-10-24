@@ -43,4 +43,13 @@ interface CategoryRepository {
      * otherwise archives it so history keeps its category.
      */
     suspend fun removeCategory(id: Long): CategoryRemoval
+
+    /** Puts back categories removed by [removeCategory], with their original ids. */
+    suspend fun restoreCategories(categories: List<Category>)
+
+    /**
+     * New display order of sibling categories: all top-level categories of one type, or all
+     * subcategories of one parent, listed in the wanted order.
+     */
+    suspend fun reorder(orderedIds: List<Long>)
 }

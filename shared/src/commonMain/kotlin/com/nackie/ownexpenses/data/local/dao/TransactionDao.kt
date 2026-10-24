@@ -66,20 +66,6 @@ internal interface TransactionDao {
         to: LocalDate,
     ): Flow<List<CategoryTotal>>
 
-    /** Number of records per top-level category, subcategories included. */
-    @Query(
-        """
-        SELECT COALESCE(c.parent_id, c.id) AS category_id, COUNT(*) AS total
-        FROM transactions t JOIN categories c ON c.id = t.category_id
-        WHERE t.date BETWEEN :from AND :to
-        GROUP BY COALESCE(c.parent_id, c.id)
-        """,
-    )
-    fun observeTopLevelCategoryUsage(
-        from: LocalDate,
-        to: LocalDate,
-    ): Flow<List<CategoryTotal>>
-
     /** Sums per day; days without records are absent. */
     @Query(
         """

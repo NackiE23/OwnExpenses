@@ -67,12 +67,6 @@ internal class RoomTransactionRepository(
             .map { rows -> rows.associate { it.categoryId to it.total } }
             .distinctUntilChanged()
 
-    override fun observeCategoryUsage(period: Period): Flow<Map<Long, Long>> =
-        dao
-            .observeTopLevelCategoryUsage(period.start, period.endInclusive)
-            .map { rows -> rows.associate { it.categoryId to it.total } }
-            .distinctUntilChanged()
-
     override fun observeTransactionDetails(period: Period): Flow<List<TransactionDetails>> =
         dao.observeWithCategories(period.start, period.endInclusive).map { rows -> rows.map { it.toDomain() } }
 

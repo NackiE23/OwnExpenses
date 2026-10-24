@@ -36,7 +36,7 @@ class WidgetSnapshotSourceTest {
     }
 
     @Test
-    fun showsBalanceAndThreeMostUsedExpenseCategories() =
+    fun showsBalanceAndFirstThreeExpenseCategoriesInUserOrder() =
         runTest {
             val salary = database.insertCategory("Salary", TransactionType.INCOME)
             val ids = (0 until 5).map { database.insertCategory("E$it", TransactionType.EXPENSE, sortOrder = it) }
@@ -48,8 +48,8 @@ class WidgetSnapshotSourceTest {
             val snapshot = source.current()
 
             assertEquals(970_00, snapshot.balanceMinor)
-            // E3 used twice, E4 once, then user order for the rest.
-            assertEquals(listOf("E3", "E4", "E0"), snapshot.categories.map { it.name })
+            // Usage does not matter: the widget mirrors the first tiles.
+            assertEquals(listOf("E0", "E1", "E2"), snapshot.categories.map { it.name })
         }
 
     @Test

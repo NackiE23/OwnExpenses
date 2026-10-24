@@ -40,9 +40,6 @@ interface TransactionRepository {
         period: Period,
     ): Flow<Map<Long, Long>>
 
-    /** Number of records within [period] per top-level category id, subcategories included. */
-    fun observeCategoryUsage(period: Period): Flow<Map<Long, Long>>
-
     /** Records of [period] with their categories, newest first (history). */
     fun observeTransactionDetails(period: Period): Flow<List<TransactionDetails>>
 

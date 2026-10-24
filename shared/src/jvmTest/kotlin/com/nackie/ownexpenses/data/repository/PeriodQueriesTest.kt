@@ -98,21 +98,6 @@ class PeriodQueriesTest {
             )
         }
 
-    @Test
-    fun usageCountsRecordsPerTopLevelCategory() =
-        runTest {
-            add(taxi, 1_00, LocalDate(2026, 10, 9))
-            add(taxi, 1_00, LocalDate(2026, 10, 10))
-            add(transport, 1_00, LocalDate(2026, 10, 11))
-            add(groceries, 1_00, LocalDate(2026, 10, 12))
-            add(groceries, 1_00, LocalDate(2026, 8, 1))
-
-            assertEquals(
-                mapOf(transport to 3L, groceries to 1L),
-                repository.observeCategoryUsage(october).first(),
-            )
-        }
-
     private suspend fun add(
         categoryId: Long,
         amountMinor: Long,

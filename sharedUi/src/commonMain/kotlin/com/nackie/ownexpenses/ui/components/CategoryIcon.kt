@@ -30,6 +30,26 @@ import com.nackie.ownexpenses.ui.resources.ic_category_utilities
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 
+/** Icons offered in the category editor, in picker order. */
+internal val categoryIconKeys =
+    listOf(
+        "groceries",
+        "cafe",
+        "transport",
+        "taxi",
+        "public_transport",
+        "home",
+        "utilities",
+        "mobile_internet",
+        "health",
+        "entertainment",
+        "clothes",
+        "pets",
+        "gifts",
+        "salary",
+        "other",
+    )
+
 /** Icon keys stored with categories; unknown keys fall back to a neutral icon. */
 internal fun categoryIcon(key: String): DrawableResource =
     when (key) {
