@@ -75,6 +75,20 @@ internal interface TransactionDao {
         to: LocalDate,
     ): Flow<List<CategoryTotal>>
 
+    /** Newest first: by date, then by the moment of entry. */
+    @Query("$TRANSACTIONS_WITH_CATEGORIES ORDER BY t.date DESC, t.created_at DESC, t.id DESC")
+    fun observeWithCategories(
+        from: LocalDate,
+        to: LocalDate,
+    ): Flow<List<TransactionWithCategory>>
+
+    /** Oldest first, as exported to CSV. */
+    @Query("$TRANSACTIONS_WITH_CATEGORIES ORDER BY t.date, t.created_at, t.id")
+    suspend fun getWithCategoriesChronologically(
+        from: LocalDate,
+        to: LocalDate,
+    ): List<TransactionWithCategory>
+
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getById(id: Long): TransactionEntity?
 
@@ -86,4 +100,16 @@ internal interface TransactionDao {
 
     @Query("DELETE FROM transactions WHERE id = :id")
     suspend fun delete(id: Long)
+
+    companion object {
+        const val TRANSACTIONS_WITH_CATEGORIES = """
+            SELECT t.*,
+                c.name AS category_name, c.icon AS category_icon, c.color AS category_color,
+                p.name AS parent_name, p.icon AS parent_icon, p.color AS parent_color
+            FROM transactions t
+            JOIN categories c ON c.id = t.category_id
+            LEFT JOIN categories p ON p.id = c.parent_id
+            WHERE t.date BETWEEN :from AND :to
+        """
+    }
 }

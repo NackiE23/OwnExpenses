@@ -1,0 +1,27 @@
+<resources>
+    <string name="settings_appearance">Вигляд</string>
+    <string name="settings_theme">Тема</string>
+    <string name="theme_system">Як у системі</string>
+    <string name="theme_light">Світла</string>
+    <string name="theme_dark">Темна</string>
+
+    <string name="settings_data">Дані</string>
+    <string name="settings_currency">Валюта</string>
+    <string name="settings_currency_value">Українська гривня (UAH)</string>
+    <string name="settings_csv_delimiter">Роздільник CSV</string>
+    <string name="csv_delimiter_semicolon">Крапка з комою ;</string>
+    <string name="csv_delimiter_comma">Кома ,</string>
+    <string name="settings_csv_delimiter_hint">Крапку з комою Excel з українськими налаштуваннями відкриває правильно. Суми мають десяткову кому при «;» і крапку при «,».</string>
+    <string name="settings_language">Мова</string>
+    <string name="settings_language_hint">Як у системі. На Android 13+ мову цього застосунку можна змінити в системних налаштуваннях.</string>
+
+    <string name="export_csv">Експорт у CSV</string>
+    <string name="export_csv_hint">Зберегти файл у папку або поділитися ним</string>
+    <string name="export_period_selected">Обраний період: %1$s</string>
+    <string name="export_period_all">Увесь час</string>
+    <string name="export_period_custom">Довільний діапазон: %1$s</string>
+    <string name="export_save">Зберегти</string>
+    <string name="export_share">Поділитися</string>
+    <string name="export_saved">Файл збережено, записів: %1$s</string>
+    <string name="export_failed">Не вдалося зберегти файл</string>
+</resources>

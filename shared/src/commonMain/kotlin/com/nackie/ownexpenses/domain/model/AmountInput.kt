@@ -78,6 +78,16 @@ data class AmountInput(
         }
 
     companion object {
+        /** Input pre-filled with a stored amount, e.g. when editing ("89", "12,50"). */
+        fun fromMinorUnits(minorUnits: Long): AmountInput {
+            require(minorUnits >= 0) { "Amount must not be negative, was $minorUnits" }
+            val fraction = minorUnits % 100
+            return AmountInput(
+                whole = (minorUnits / 100).toString(),
+                fraction = if (fraction == 0L) null else fraction.toString().padStart(FRACTION_DIGITS, '0'),
+            )
+        }
+
         const val FRACTION_DIGITS = 2
 
         /** Up to 999 999 999.99, far above any personal expense and safe for Long minor units. */

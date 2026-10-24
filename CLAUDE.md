@@ -49,8 +49,10 @@ docs/         TZ.md, design-reference/
 
 Пакети (`com.nackie.ownexpenses`):
 
-- `shared`: `domain.model` (моделі), `domain.repository` (інтерфейси репозиторіїв), `data.local` (Room: `AppDatabase`, `entity`, `dao`), `data.settings` (DataStore), `data.repository` (реалізації, сідер категорій), `di` (`sharedModule` + `platformModule` через expect/actual), `AppInitializer` (разовий старт: категорії за замовчуванням), `domain` (`TodayProvider`, `PeriodSelection`: один вибір періоду на всі екрани), `presentation` (ViewModel по пакету на екран, `presentation.format.MoneyFormatter`).
-- `sharedUi`: `ui` (`App`, `UiTestTags`), `ui.di` (`uiModule`), `ui.theme`, `ui.navigation`, `ui.components`, `ui.format` (дати, періоди, гроші за мовою UI), по пакету на екран (`ui.home`, `ui.quickentry`, `ui.operations`, `ui.statistics`, `ui.more`). Клас ресурсів: `com.nackie.ownexpenses.ui.resources.Res`.
+- `shared`: `domain.model` (моделі), `domain.repository` (інтерфейси репозиторіїв), `data.local` (Room: `AppDatabase`, `entity`, `dao`), `data.settings` (DataStore), `data.repository` (реалізації, сідер категорій), `di` (`sharedModule` + `platformModule` через expect/actual), `AppInitializer` (разовий старт: категорії за замовчуванням), `domain` (`TodayProvider`, `PeriodSelection`: один вибір періоду на всі екрани), `presentation` (ViewModel по пакету на екран: `home`, `quickentry` (додавання, редагування, видалення й undo), `history`, `settings`; `AppViewModel` для теми; `presentation.format.MoneyFormatter`), `export` (`CsvExporter`).
+- `sharedUi`: `ui` (`App`, `UiTestTags`), `ui.di` (`uiModule`), `ui.theme`, `ui.navigation`, `ui.components`, `ui.format` (дати, періоди, гроші за мовою UI), `ui.period` (перемикач і діалог періоду), по пакету на екран (`ui.home`, `ui.quickentry`, `ui.operations`, `ui.statistics`, `ui.more`). Клас ресурсів: `com.nackie.ownexpenses.ui.resources.Res`.
+
+Панель вводу (`QuickEntryHost`) спільна для головного екрана й історії: екран і хост отримують один `QuickEntryViewModel` через `koinViewModel()` того самого власника. Файли експорту (збереження через системний вибір файлу, «Поділитися» через FileProvider) — `expect`/`actual` у `ui.more`; FileProvider оголошений у маніфесті `sharedUi/src/androidMain`.
 
 Елементи, які чіпають UI-тести, мають тег з `UiTestTags`; тести не шукають за текстом, бо він залежить від мови.
 

@@ -83,6 +83,19 @@ class PeriodTest {
     }
 
     @Test
+    fun periodOfKindContainsTheDate() {
+        val date = LocalDate(2026, 10, 24)
+
+        PeriodKind.entries.filter { it != PeriodKind.CUSTOM }.forEach { kind ->
+            val period = Period.of(kind, date)
+            assertEquals(kind, period.kind)
+            assertTrue(date in period, "$kind")
+        }
+        assertEquals(PeriodKind.CUSTOM, Period.Custom(date, date).kind)
+        assertFailsWith<IllegalArgumentException> { Period.of(PeriodKind.CUSTOM, date) }
+    }
+
+    @Test
     fun containsIsInclusive() {
         val october = Period.monthOf(LocalDate(2026, 10, 1))
 

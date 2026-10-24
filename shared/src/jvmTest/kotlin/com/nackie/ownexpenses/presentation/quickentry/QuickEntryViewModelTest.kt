@@ -42,7 +42,7 @@ internal class QuickEntryViewModelTest : MainDispatcherTest() {
             transport = RoomCategoryRepository(database).observeCategories(TransactionType.EXPENSE).first().single()
 
             transactions = RoomTransactionRepository(database, MutableClock())
-            viewModel = QuickEntryViewModel(transactions, FakeTodayProvider(today))
+            viewModel = QuickEntryViewModel(RoomCategoryRepository(database), transactions, FakeTodayProvider(today))
         }
 
     @AfterTest
@@ -141,7 +141,7 @@ internal class QuickEntryViewModelTest : MainDispatcherTest() {
                 viewModel.submit()
                 val added = assertIs<QuickEntryEvent.Added>(awaitItem())
 
-                viewModel.undo(added.transactionId)
+                viewModel.undoAdd(added.transactionId)
 
                 transactions.observeBalance(today).test {
                     var balance = awaitItem()

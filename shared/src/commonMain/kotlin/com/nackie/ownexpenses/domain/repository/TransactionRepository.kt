@@ -3,6 +3,7 @@ package com.nackie.ownexpenses.domain.repository
 import com.nackie.ownexpenses.domain.model.Period
 import com.nackie.ownexpenses.domain.model.PeriodTotals
 import com.nackie.ownexpenses.domain.model.Transaction
+import com.nackie.ownexpenses.domain.model.TransactionDetails
 import com.nackie.ownexpenses.domain.model.TransactionInput
 import com.nackie.ownexpenses.domain.model.TransactionType
 import kotlinx.coroutines.flow.Flow
@@ -29,6 +30,12 @@ interface TransactionRepository {
 
     /** Number of records within [period] per top-level category id, subcategories included. */
     fun observeCategoryUsage(period: Period): Flow<Map<Long, Long>>
+
+    /** Records of [period] with their categories, newest first (history). */
+    fun observeTransactionDetails(period: Period): Flow<List<TransactionDetails>>
+
+    /** Records of [period] with their categories, oldest first (CSV export). */
+    suspend fun getTransactionDetailsChronologically(period: Period): List<TransactionDetails>
 
     suspend fun getTransaction(id: Long): Transaction?
 

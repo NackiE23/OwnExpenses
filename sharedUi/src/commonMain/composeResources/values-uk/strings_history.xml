@@ -1,0 +1,29 @@
+<resources>
+    <string name="history_empty">Немає операцій за цей період</string>
+    <string name="history_delete">Видалити</string>
+    <string name="category_with_subcategory">%1$s (%2$s)</string>
+    <string name="snackbar_deleted">Операцію видалено</string>
+
+    <string name="quick_entry_edit_title">Редагування</string>
+    <string name="quick_entry_save">Зберегти</string>
+    <string name="quick_entry_delete">Видалити</string>
+    <string name="quick_entry_change_category">Змінити категорію</string>
+
+    <string name="period_picker_title">Період</string>
+    <string name="period_kind_day">День</string>
+    <string name="period_kind_week">Тиждень</string>
+    <string name="period_kind_month">Місяць</string>
+    <string name="period_kind_year">Рік</string>
+    <string name="period_kind_custom">Довільний діапазон…</string>
+    <string name="period_pick">Вибрати період</string>
+
+    <string-array name="weekdays">
+        <item>Понеділок</item>
+        <item>Вівторок</item>
+        <item>Середа</item>
+        <item>Четвер</item>
+        <item>Пʼятниця</item>
+        <item>Субота</item>
+        <item>Неділя</item>
+    </string-array>
+</resources>

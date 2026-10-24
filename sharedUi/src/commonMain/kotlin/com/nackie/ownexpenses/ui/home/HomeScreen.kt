@@ -17,8 +17,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
@@ -38,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nackie.ownexpenses.domain.model.CategoryWithSubcategories
+import com.nackie.ownexpenses.domain.model.Period
 import com.nackie.ownexpenses.domain.model.TransactionType
 import com.nackie.ownexpenses.presentation.format.MoneyFormatter
 import com.nackie.ownexpenses.presentation.home.CategoryTile
@@ -46,22 +45,16 @@ import com.nackie.ownexpenses.presentation.home.HomeViewModel
 import com.nackie.ownexpenses.presentation.quickentry.QuickEntryViewModel
 import com.nackie.ownexpenses.ui.UiTestTags
 import com.nackie.ownexpenses.ui.components.CategoryIconBadge
-import com.nackie.ownexpenses.ui.format.periodLabel
 import com.nackie.ownexpenses.ui.format.rememberMoneyFormatter
-import com.nackie.ownexpenses.ui.quickentry.QuickEntryEventsEffect
-import com.nackie.ownexpenses.ui.quickentry.QuickEntrySheet
+import com.nackie.ownexpenses.ui.period.PeriodSwitcher
+import com.nackie.ownexpenses.ui.quickentry.QuickEntryHost
 import com.nackie.ownexpenses.ui.quickentry.UndoSnackbarHost
 import com.nackie.ownexpenses.ui.resources.Res
 import com.nackie.ownexpenses.ui.resources.balance_title
 import com.nackie.ownexpenses.ui.resources.home_no_categories
-import com.nackie.ownexpenses.ui.resources.ic_chevron_left
-import com.nackie.ownexpenses.ui.resources.ic_chevron_right
-import com.nackie.ownexpenses.ui.resources.period_next
-import com.nackie.ownexpenses.ui.resources.period_previous
 import com.nackie.ownexpenses.ui.resources.type_expenses
 import com.nackie.ownexpenses.ui.resources.type_incomes
 import com.nackie.ownexpenses.ui.theme.OwnExpensesTheme
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -73,15 +66,8 @@ internal fun HomeScreen(
     quickEntryViewModel: QuickEntryViewModel = koinViewModel(),
 ) {
     val state by homeViewModel.uiState.collectAsStateWithLifecycle()
-    val entryState by quickEntryViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val formatter = rememberMoneyFormatter()
-
-    QuickEntryEventsEffect(
-        events = quickEntryViewModel.events,
-        snackbarHostState = snackbarHostState,
-        onUndo = quickEntryViewModel::undo,
-    )
 
     Scaffold(
         modifier = modifier,
@@ -93,26 +79,14 @@ internal fun HomeScreen(
             formatter = formatter,
             onPreviousPeriod = homeViewModel::showPreviousPeriod,
             onNextPeriod = homeViewModel::showNextPeriod,
+            onSelectPeriod = homeViewModel::selectPeriod,
             onSelectType = homeViewModel::selectType,
             onTileClick = quickEntryViewModel::open,
             modifier = Modifier.padding(innerPadding),
         )
     }
 
-    entryState?.let { entry ->
-        QuickEntrySheet(
-            state = entry,
-            formatter = formatter,
-            onDismiss = quickEntryViewModel::close,
-            onKey = quickEntryViewModel::onKey,
-            onSubcategoryClick = quickEntryViewModel::onSubcategoryClick,
-            onShiftDate = quickEntryViewModel::shiftDate,
-            onPickDate = quickEntryViewModel::setDate,
-            onExpandDescription = quickEntryViewModel::expandDescription,
-            onDescriptionChange = quickEntryViewModel::onDescriptionChange,
-            onSubmit = quickEntryViewModel::submit,
-        )
-    }
+    QuickEntryHost(snackbarHostState = snackbarHostState, formatter = formatter)
 }
 
 @Composable
@@ -121,6 +95,7 @@ private fun HomeContent(
     formatter: MoneyFormatter,
     onPreviousPeriod: () -> Unit,
     onNextPeriod: () -> Unit,
+    onSelectPeriod: (Period) -> Unit,
     onSelectType: (TransactionType) -> Unit,
     onTileClick: (CategoryWithSubcategories) -> Unit,
     modifier: Modifier = Modifier,
@@ -136,9 +111,11 @@ private fun HomeContent(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 BalanceHeader(balanceMinor = state.balanceMinor, formatter = formatter)
                 PeriodSwitcher(
-                    label = periodLabel(state.period),
+                    period = state.period,
+                    today = state.today,
                     onPrevious = onPreviousPeriod,
                     onNext = onNextPeriod,
+                    onSelect = onSelectPeriod,
                 )
                 TypeSwitch(
                     selectedType = state.selectedType,
@@ -177,6 +154,8 @@ private fun BalanceHeader(
     formatter: MoneyFormatter,
     modifier: Modifier = Modifier,
 ) {
+    val isNegative = balanceMinor < 0
+    val color = if (isNegative) OwnExpensesTheme.moneyColors.negativeBalance else MaterialTheme.colorScheme.onSurface
     Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = stringResource(Res.string.balance_title),
@@ -186,39 +165,9 @@ private fun BalanceHeader(
         Text(
             text = formatter.format(balanceMinor),
             style = MaterialTheme.typography.displaySmall,
-            color =
-                if (balanceMinor <
-                    0
-                ) {
-                    OwnExpensesTheme.moneyColors.negativeBalance
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
+            color = color,
             modifier = Modifier.testTag(UiTestTags.BALANCE),
         )
-    }
-}
-
-@Composable
-private fun PeriodSwitcher(
-    label: String,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onPrevious) {
-            Icon(painterResource(Res.drawable.ic_chevron_left), stringResource(Res.string.period_previous))
-        }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleMedium,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f),
-        )
-        IconButton(onClick = onNext) {
-            Icon(painterResource(Res.drawable.ic_chevron_right), stringResource(Res.string.period_next))
-        }
     }
 }
 

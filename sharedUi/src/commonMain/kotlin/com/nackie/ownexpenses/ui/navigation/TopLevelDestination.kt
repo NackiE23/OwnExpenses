@@ -1,5 +1,6 @@
 package com.nackie.ownexpenses.ui.navigation
 
+import com.nackie.ownexpenses.ui.UiTestTags
 import com.nackie.ownexpenses.ui.resources.Res
 import com.nackie.ownexpenses.ui.resources.ic_tab_categories
 import com.nackie.ownexpenses.ui.resources.ic_tab_more
@@ -30,9 +31,10 @@ internal enum class TopLevelDestination(
     val route: Any,
     val label: StringResource,
     val icon: DrawableResource,
+    val testTag: String,
 ) {
-    CATEGORIES(CategoriesRoute, Res.string.tab_categories, Res.drawable.ic_tab_categories),
-    OPERATIONS(OperationsRoute, Res.string.tab_operations, Res.drawable.ic_tab_operations),
-    STATISTICS(StatisticsRoute, Res.string.tab_statistics, Res.drawable.ic_tab_statistics),
-    MORE(MoreRoute, Res.string.tab_more, Res.drawable.ic_tab_more),
+    CATEGORIES(CategoriesRoute, Res.string.tab_categories, Res.drawable.ic_tab_categories, UiTestTags.TAB_CATEGORIES),
+    OPERATIONS(OperationsRoute, Res.string.tab_operations, Res.drawable.ic_tab_operations, UiTestTags.TAB_OPERATIONS),
+    STATISTICS(StatisticsRoute, Res.string.tab_statistics, Res.drawable.ic_tab_statistics, UiTestTags.TAB_STATISTICS),
+    MORE(MoreRoute, Res.string.tab_more, Res.drawable.ic_tab_more, UiTestTags.TAB_MORE),
 }

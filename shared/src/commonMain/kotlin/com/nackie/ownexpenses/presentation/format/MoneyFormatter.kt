@@ -5,7 +5,7 @@ import kotlin.math.absoluteValue
 
 /**
  * Formats amounts for display: grouped thousands, kopiykas only when non-zero, currency
- * symbol after the number ("2 086 ₴", "−150,50 ₴"). Separators come from the UI locale.
+ * symbol after the number ("2 086 ₴", "-150,50 ₴"). Separators come from the UI locale.
  */
 class MoneyFormatter(
     private val decimalSeparator: Char,
@@ -20,6 +20,9 @@ class MoneyFormatter(
         val fractionPart = if (fraction == 0L) "" else decimalSeparator + fraction.toString().padStart(2, '0')
         return "$sign$whole$fractionPart$NO_BREAK_SPACE$currencySymbol"
     }
+
+    /** Like [format], with an explicit plus for positive amounts ("+1 000 ₴", "-89 ₴"). */
+    fun formatSigned(minorUnits: Long): String = if (minorUnits > 0) "+" + format(minorUnits) else format(minorUnits)
 
     /** Amount as typed on the keypad, keeping a trailing separator or zeros ("12,", "12,50"). */
     fun formatInput(input: AmountInput): String {
@@ -39,8 +42,8 @@ class MoneyFormatter(
 
     companion object {
         const val UAH_SYMBOL = "₴"
-        private const val MINUS_SIGN = "−"
-        private const val NO_BREAK_SPACE = ' '
+        private const val MINUS_SIGN = "\u2212"
+        private const val NO_BREAK_SPACE = '\u00A0'
 
         /** Ukrainian conventions: decimal comma, (no-break) space between thousands. */
         val Ukrainian = MoneyFormatter(decimalSeparator = ',', groupingSeparator = NO_BREAK_SPACE)

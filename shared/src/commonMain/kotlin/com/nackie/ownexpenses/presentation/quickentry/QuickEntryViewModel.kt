@@ -7,14 +7,18 @@ import com.nackie.ownexpenses.domain.model.AmountInput
 import com.nackie.ownexpenses.domain.model.AmountKey
 import com.nackie.ownexpenses.domain.model.Category
 import com.nackie.ownexpenses.domain.model.CategoryWithSubcategories
+import com.nackie.ownexpenses.domain.model.Transaction
 import com.nackie.ownexpenses.domain.model.TransactionInput
 import com.nackie.ownexpenses.domain.model.TransactionType
+import com.nackie.ownexpenses.domain.repository.CategoryRepository
 import com.nackie.ownexpenses.domain.repository.TransactionRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -33,25 +37,39 @@ data class QuickEntryUiState(
     val description: String = "",
     val isDescriptionExpanded: Boolean = false,
     val isSaving: Boolean = false,
+    /** The record being edited; null when adding a new one. */
+    val editing: Transaction? = null,
+    /** Categories the edited record can be moved to (same type); empty when adding. */
+    val categoryChoices: List<CategoryWithSubcategories> = emptyList(),
 ) {
+    val isEditing: Boolean get() = editing != null
+
     val canSubmit: Boolean get() = amount.minorUnits > 0 && !isSaving
 }
 
 sealed interface QuickEntryEvent {
-    /** Shown as a snackbar with an undo action. */
+    /** Shown as a snackbar with an undo action that removes the record again. */
     data class Added(
         val transactionId: Long,
         val type: TransactionType,
+    ) : QuickEntryEvent
+
+    data object Updated : QuickEntryEvent
+
+    /** Shown as a snackbar with an undo action that restores [transaction]. */
+    data class Deleted(
+        val transaction: Transaction,
     ) : QuickEntryEvent
 
     data object SaveFailed : QuickEntryEvent
 }
 
 /**
- * Bottom panel for recording an operation in three actions: tap a category, type the amount,
- * tap Add. No confirmations; a mistake is undone from the snackbar.
+ * Entry panel for adding (three actions: category, amount, Add) and editing records, plus
+ * deletion. Nothing asks for confirmation; adding and deleting are undone from the snackbar.
  */
 class QuickEntryViewModel(
+    private val categoryRepository: CategoryRepository,
     private val transactionRepository: TransactionRepository,
     private val todayProvider: TodayProvider,
 ) : ViewModel() {
@@ -63,7 +81,10 @@ class QuickEntryViewModel(
     private val eventChannel = Channel<QuickEntryEvent>(Channel.BUFFERED)
     val events: Flow<QuickEntryEvent> = eventChannel.receiveAsFlow()
 
+    private var openJob: Job? = null
+
     fun open(category: CategoryWithSubcategories) {
+        openJob?.cancel()
         val today = todayProvider.today()
         state.value =
             QuickEntryUiState(
@@ -74,7 +95,42 @@ class QuickEntryViewModel(
             )
     }
 
+    /** Opens the panel pre-filled with a stored record. */
+    fun openForEdit(transactionId: Long) {
+        openJob?.cancel()
+        openJob =
+            viewModelScope.launch {
+                val transaction = transactionRepository.getTransaction(transactionId) ?: return@launch
+                // Archived categories are included so that old records stay editable.
+                val tree = categoryRepository.observeCategories(transaction.type, includeArchived = true).first()
+                val node =
+                    tree.firstOrNull { node ->
+                        node.category.id == transaction.categoryId ||
+                            node.subcategories.any { it.id == transaction.categoryId }
+                    } ?: return@launch
+                val selectedSubcategoryId = node.subcategories.firstOrNull { it.id == transaction.categoryId }?.id
+
+                state.value =
+                    QuickEntryUiState(
+                        category = node.category,
+                        subcategories = node.subcategories.activeOr(selectedSubcategoryId),
+                        selectedSubcategoryId = selectedSubcategoryId,
+                        amount = AmountInput.fromMinorUnits(transaction.amountMinor),
+                        date = transaction.date,
+                        today = todayProvider.today(),
+                        description = transaction.description.orEmpty(),
+                        isDescriptionExpanded = transaction.description != null,
+                        editing = transaction,
+                        categoryChoices =
+                            tree
+                                .filter { !it.category.isArchived || it.category.id == node.category.id }
+                                .map { it.copy(subcategories = it.subcategories.activeOr(selectedSubcategoryId)) },
+                    )
+            }
+    }
+
     fun close() {
+        openJob?.cancel()
         state.value = null
     }
 
@@ -83,6 +139,13 @@ class QuickEntryViewModel(
     /** Tapping the selected chip again clears it: the record then goes to the parent category. */
     fun onSubcategoryClick(id: Long) =
         edit { it.copy(selectedSubcategoryId = if (it.selectedSubcategoryId == id) null else id) }
+
+    /** Moves an edited record to another top-level category of the same type. */
+    fun selectCategory(categoryId: Long) =
+        edit { current ->
+            val choice = current.categoryChoices.firstOrNull { it.category.id == categoryId } ?: return@edit current
+            current.copy(category = choice.category, subcategories = choice.subcategories, selectedSubcategoryId = null)
+        }
 
     fun shiftDate(days: Int) = edit { it.copy(date = it.date.plus(days, DateTimeUnit.DAY)) }
 
@@ -106,19 +169,59 @@ class QuickEntryViewModel(
                     description = current.description,
                 )
             try {
-                val id = transactionRepository.addTransaction(input)
+                val event =
+                    when (val editing = current.editing) {
+                        null -> {
+                            QuickEntryEvent.Added(
+                                transactionRepository.addTransaction(input),
+                                current.category.type,
+                            )
+                        }
+
+                        else -> {
+                            QuickEntryEvent.Updated.also {
+                                transactionRepository.updateTransaction(
+                                    editing.id,
+                                    input,
+                                )
+                            }
+                        }
+                    }
                 state.value = null
-                eventChannel.send(QuickEntryEvent.Added(id, current.category.type))
+                eventChannel.send(event)
             } catch (e: IllegalArgumentException) {
-                // The category disappeared meanwhile (e.g. deleted elsewhere); keep the input.
+                // The category or record disappeared meanwhile; keep the input.
                 state.update { it?.copy(isSaving = false) }
                 eventChannel.send(QuickEntryEvent.SaveFailed)
             }
         }
     }
 
-    fun undo(transactionId: Long) {
+    /** Deletes the record open for editing. */
+    fun deleteEdited() {
+        val editing = state.value?.editing ?: return
+        state.value = null
+        deleteTransaction(editing.id)
+    }
+
+    /** Deletes a record without opening the panel (swipe in history). */
+    fun deleteTransaction(transactionId: Long) {
+        viewModelScope.launch {
+            transactionRepository
+                .deleteTransaction(
+                    transactionId,
+                )?.let { eventChannel.send(QuickEntryEvent.Deleted(it)) }
+        }
+    }
+
+    /** Undo for [QuickEntryEvent.Added]. */
+    fun undoAdd(transactionId: Long) {
         viewModelScope.launch { transactionRepository.deleteTransaction(transactionId) }
+    }
+
+    /** Undo for [QuickEntryEvent.Deleted]. */
+    fun undoDelete(transaction: Transaction) {
+        viewModelScope.launch { transactionRepository.restoreTransaction(transaction) }
     }
 
     private fun edit(transform: (QuickEntryUiState) -> QuickEntryUiState) {
@@ -129,3 +232,6 @@ class QuickEntryViewModel(
         const val MAX_DESCRIPTION_LENGTH = 200
     }
 }
+
+/** Non-archived subcategories, plus [keepId] even if archived (the edited record uses it). */
+private fun List<Category>.activeOr(keepId: Long?): List<Category> = filter { !it.isArchived || it.id == keepId }

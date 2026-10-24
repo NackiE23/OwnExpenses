@@ -14,8 +14,11 @@ import com.nackie.ownexpenses.domain.TodayProvider
 import com.nackie.ownexpenses.domain.repository.CategoryRepository
 import com.nackie.ownexpenses.domain.repository.SettingsRepository
 import com.nackie.ownexpenses.domain.repository.TransactionRepository
+import com.nackie.ownexpenses.presentation.AppViewModel
+import com.nackie.ownexpenses.presentation.history.HistoryViewModel
 import com.nackie.ownexpenses.presentation.home.HomeViewModel
 import com.nackie.ownexpenses.presentation.quickentry.QuickEntryViewModel
+import com.nackie.ownexpenses.presentation.settings.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -47,6 +50,9 @@ val sharedModule: Module =
 
         viewModelOf(::HomeViewModel)
         viewModelOf(::QuickEntryViewModel)
+        viewModelOf(::HistoryViewModel)
+        viewModelOf(::SettingsViewModel)
+        viewModelOf(::AppViewModel)
     }
 
 internal expect val platformModule: Module

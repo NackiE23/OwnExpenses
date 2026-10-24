@@ -16,11 +16,17 @@ import com.nackie.ownexpenses.ui.resources.date_yesterday
 import com.nackie.ownexpenses.ui.resources.months_standalone
 import com.nackie.ownexpenses.ui.resources.months_with_day
 import com.nackie.ownexpenses.ui.resources.period_all_time
+import com.nackie.ownexpenses.ui.resources.weekdays
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.daysUntil
+import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.number
+import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Instant
 
 /** Money formatter matching the UI language (decimal comma for Ukrainian). */
 @Composable
@@ -34,11 +40,7 @@ internal fun rememberMoneyFormatter(): MoneyFormatter {
 internal fun periodLabel(period: Period): String =
     when (period) {
         is Period.Month -> {
-            stringResource(
-                Res.string.date_month_year,
-                stringArrayResource(Res.array.months_standalone)[period.start.month.number - 1],
-                period.start.year.toString(),
-            )
+            monthYear(period.start)
         }
 
         is Period.Year -> {
@@ -70,6 +72,26 @@ internal fun entryDateLabel(
         1 -> stringResource(Res.string.date_tomorrow, dayMonth(date))
         else -> if (date.year == today.year) dayMonth(date) else dayMonthYear(date)
     }
+
+/** "Субота". */
+@Composable
+internal fun weekdayName(date: LocalDate): String =
+    stringArrayResource(Res.array.weekdays)[date.dayOfWeek.isoDayNumber - 1]
+
+/** "Жовтень 2026". */
+@Composable
+internal fun monthYear(date: LocalDate): String =
+    stringResource(
+        Res.string.date_month_year,
+        stringArrayResource(Res.array.months_standalone)[date.month.number - 1],
+        date.year.toString(),
+    )
+
+/** Material date pickers work with UTC midnight milliseconds. */
+internal fun LocalDate.toUtcMillis(): Long = atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds()
+
+internal fun Long.toLocalDateFromUtcMillis(): LocalDate =
+    Instant.fromEpochMilliseconds(this).toLocalDateTime(TimeZone.UTC).date
 
 @Composable
 private fun dayMonth(date: LocalDate): String =

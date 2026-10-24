@@ -1,0 +1,28 @@
+<resources>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+
+    <string name="settings_data">Data</string>
+    <string name="settings_currency">Currency</string>
+    <string name="settings_currency_value">Ukrainian hryvnia (UAH)</string>
+    <string name="settings_csv_delimiter">CSV delimiter</string>
+    <string name="csv_delimiter_semicolon">Semicolon ;</string>
+    <string name="csv_delimiter_comma">Comma ,</string>
+    <string name="settings_csv_delimiter_hint">Semicolon opens correctly in Excel with Ukrainian settings. Amounts use a decimal comma with ; and a decimal dot with ,.</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_hint">Follows the system. On Android 13+ it can be set for this app in the system settings.</string>
+
+    <string name="export_csv">Export to CSV</string>
+    <string name="export_csv_hint">Save the file to a folder or share it</string>
+    <string name="export_period_selected">Selected period: %1$s</string>
+    <string name="export_period_all">All time</string>
+    <string name="export_period_custom">Custom range: %1$s</string>
+    <string name="export_save">Save</string>
+    <string name="export_share">Share</string>
+    <!-- %1$s number of exported records -->
+    <string name="export_saved">File saved, records: %1$s</string>
+    <string name="export_failed">Could not save the file</string>
+</resources>

@@ -1,19 +1,14 @@
 package com.nackie.ownexpenses.data.repository
 
+import com.nackie.ownexpenses.data.FakeSettingsRepository
 import com.nackie.ownexpenses.data.createTestDatabase
 import com.nackie.ownexpenses.data.insertCategory
 import com.nackie.ownexpenses.data.local.AppDatabase
-import com.nackie.ownexpenses.domain.model.AppSettings
-import com.nackie.ownexpenses.domain.model.CsvDelimiter
 import com.nackie.ownexpenses.domain.model.DefaultCategory
 import com.nackie.ownexpenses.domain.model.DefaultCategoryNames
-import com.nackie.ownexpenses.domain.model.ThemeMode
 import com.nackie.ownexpenses.domain.model.TransactionType
-import com.nackie.ownexpenses.domain.repository.SettingsRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
@@ -109,25 +104,4 @@ class DefaultCategorySeederTest {
             assertEquals(1, database.categoryDao().count())
             assertTrue(settings.seeded)
         }
-}
-
-private class FakeSettingsRepository : SettingsRepository {
-    var seeded = false
-    private val state = MutableStateFlow(AppSettings())
-
-    override val settings: Flow<AppSettings> = state
-
-    override suspend fun setCsvDelimiter(delimiter: CsvDelimiter) {
-        state.value = state.value.copy(csvDelimiter = delimiter)
-    }
-
-    override suspend fun setThemeMode(mode: ThemeMode) {
-        state.value = state.value.copy(themeMode = mode)
-    }
-
-    override suspend fun isDefaultCategoriesSeeded(): Boolean = seeded
-
-    override suspend fun markDefaultCategoriesSeeded() {
-        seeded = true
-    }
 }

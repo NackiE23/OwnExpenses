@@ -1,0 +1,33 @@
+<resources>
+    <!-- History -->
+    <string name="history_empty">No operations in this period</string>
+    <string name="history_delete">Delete</string>
+    <!-- %1$s category, %2$s subcategory -->
+    <string name="category_with_subcategory">%1$s (%2$s)</string>
+    <string name="snackbar_deleted">Operation deleted</string>
+
+    <!-- Editing in the entry panel -->
+    <string name="quick_entry_edit_title">Edit operation</string>
+    <string name="quick_entry_save">Save</string>
+    <string name="quick_entry_delete">Delete</string>
+    <string name="quick_entry_change_category">Change category</string>
+
+    <!-- Period picker -->
+    <string name="period_picker_title">Period</string>
+    <string name="period_kind_day">Day</string>
+    <string name="period_kind_week">Week</string>
+    <string name="period_kind_month">Month</string>
+    <string name="period_kind_year">Year</string>
+    <string name="period_kind_custom">Custom range…</string>
+    <string name="period_pick">Choose period</string>
+
+    <string-array name="weekdays">
+        <item>Monday</item>
+        <item>Tuesday</item>
+        <item>Wednesday</item>
+        <item>Thursday</item>
+        <item>Friday</item>
+        <item>Saturday</item>
+        <item>Sunday</item>
+    </string-array>
+</resources>

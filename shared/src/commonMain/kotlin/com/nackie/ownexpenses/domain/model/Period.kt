@@ -89,7 +89,33 @@ sealed interface Period {
         }
     }
 
+    /** Kind shown as selected in the period picker. */
+    val kind: PeriodKind
+        get() =
+            when (this) {
+                is Day -> PeriodKind.DAY
+                is Week -> PeriodKind.WEEK
+                is Month -> PeriodKind.MONTH
+                is Year -> PeriodKind.YEAR
+                AllTime -> PeriodKind.ALL_TIME
+                is Custom -> PeriodKind.CUSTOM
+            }
+
     companion object {
+        /** The period of [kind] that contains [date]; a custom range needs explicit dates. */
+        fun of(
+            kind: PeriodKind,
+            date: LocalDate,
+        ): Period =
+            when (kind) {
+                PeriodKind.DAY -> dayOf(date)
+                PeriodKind.WEEK -> weekOf(date)
+                PeriodKind.MONTH -> monthOf(date)
+                PeriodKind.YEAR -> yearOf(date)
+                PeriodKind.ALL_TIME -> AllTime
+                PeriodKind.CUSTOM -> throw IllegalArgumentException("A custom period needs a start and an end")
+            }
+
         fun dayOf(date: LocalDate): Period = Day(date)
 
         fun weekOf(date: LocalDate): Period = Week(date.minus(date.dayOfWeek.ordinal, DateTimeUnit.DAY))
@@ -98,4 +124,14 @@ sealed interface Period {
 
         fun yearOf(date: LocalDate): Period = Year(date.year)
     }
+}
+
+/** Options of the period picker, in display order. */
+enum class PeriodKind {
+    DAY,
+    WEEK,
+    MONTH,
+    YEAR,
+    ALL_TIME,
+    CUSTOM,
 }

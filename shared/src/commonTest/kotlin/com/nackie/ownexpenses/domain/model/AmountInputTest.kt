@@ -76,6 +76,16 @@ class AmountInputTest {
     }
 
     @Test
+    fun prefilledFromStoredAmount() {
+        assertEquals(typed("89"), AmountInput.fromMinorUnits(89_00))
+        assertEquals(typed("12,50"), AmountInput.fromMinorUnits(12_50))
+        assertEquals(typed("0,05"), AmountInput.fromMinorUnits(5))
+        // Editing continues from the stored value: "12,50" -> "12,5" -> "12,57".
+        val edited = AmountInput.fromMinorUnits(12_50).press(AmountKey.Backspace).press(AmountKey.Digit(7))
+        assertEquals(12_57, edited.minorUnits)
+    }
+
+    @Test
     fun otherCharactersAreIgnored() {
         assertEquals(typed("15"), typed("1a5-"))
     }

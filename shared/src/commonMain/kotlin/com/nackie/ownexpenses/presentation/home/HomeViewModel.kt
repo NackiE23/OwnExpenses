@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.datetime.DateTimeUnit
@@ -26,6 +27,8 @@ import kotlinx.datetime.minus
 data class HomeUiState(
     val balanceMinor: Long = 0,
     val period: Period,
+    /** Used by the period picker; changes at midnight. */
+    val today: LocalDate,
     val selectedType: TransactionType = TransactionType.EXPENSE,
     val totals: PeriodTotals = PeriodTotals(),
     val tiles: List<CategoryTile> = emptyList(),
@@ -44,14 +47,16 @@ class HomeViewModel(
     private val categoryRepository: CategoryRepository,
     private val transactionRepository: TransactionRepository,
     private val periodSelection: PeriodSelection,
-    todayProvider: TodayProvider,
+    private val todayProvider: TodayProvider,
 ) : ViewModel() {
     private val selectedType = MutableStateFlow(TransactionType.EXPENSE)
 
     private val today: Flow<LocalDate> =
         todayProvider.observeToday().shareIn(viewModelScope, SharingStarted.WhileSubscribed(), replay = 1)
 
-    private val balance: Flow<Long> = today.flatMapLatest(transactionRepository::observeBalance)
+    /** Balance as of today, paired with that day so both change together at midnight. */
+    private val balance: Flow<Pair<LocalDate, Long>> =
+        today.flatMapLatest { day -> transactionRepository.observeBalance(day).map { day to it } }
 
     private val totals: Flow<PeriodTotals> =
         periodSelection.period.flatMapLatest(
@@ -71,8 +76,9 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> =
         combine(balance, periodSelection.period, selectedType, totals, tiles) { balance, period, type, totals, tiles ->
             HomeUiState(
-                balanceMinor = balance,
+                balanceMinor = balance.second,
                 period = period,
+                today = balance.first,
                 selectedType = type,
                 totals = totals,
                 tiles = tiles,
@@ -81,7 +87,7 @@ class HomeViewModel(
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-            initialValue = HomeUiState(period = periodSelection.period.value),
+            initialValue = HomeUiState(period = periodSelection.period.value, today = todayProvider.today()),
         )
 
     fun selectType(type: TransactionType) {
@@ -91,6 +97,8 @@ class HomeViewModel(
     fun showPreviousPeriod() = periodSelection.shift(-1)
 
     fun showNextPeriod() = periodSelection.shift(1)
+
+    fun selectPeriod(period: Period) = periodSelection.select(period)
 
     private data class TileQuery(
         val type: TransactionType,

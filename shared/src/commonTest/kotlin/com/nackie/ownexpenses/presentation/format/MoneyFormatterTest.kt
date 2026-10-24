@@ -10,7 +10,7 @@ class MoneyFormatterTest {
     private val en = MoneyFormatter.English
 
     // Real output uses no-break spaces; tests compare against readable strings.
-    private fun MoneyFormatter.plain(minor: Long) = format(minor).replace(' ', ' ')
+    private fun MoneyFormatter.plain(minor: Long) = format(minor).replace('\u00A0', ' ')
 
     @Test
     fun wholeAmountsHaveNoKopiykas() {
@@ -28,7 +28,14 @@ class MoneyFormatterTest {
 
     @Test
     fun negativeAmountsUseMinusSign() {
-        assertEquals("−150,50 ₴", uk.plain(-150_50))
+        assertEquals("\u2212150,50 ₴", uk.plain(-150_50))
+    }
+
+    @Test
+    fun signedFormatMarksIncomesWithPlus() {
+        assertEquals("+1 000 ₴", uk.formatSigned(1_000_00).replace('\u00A0', ' '))
+        assertEquals("\u221289 ₴", uk.formatSigned(-89_00).replace('\u00A0', ' '))
+        assertEquals("0 ₴", uk.formatSigned(0).replace('\u00A0', ' '))
     }
 
     @Test
@@ -41,9 +48,9 @@ class MoneyFormatterTest {
         val keys = listOf(1, 2, 3, 4).map { AmountKey.Digit(it) } + AmountKey.DecimalSeparator + AmountKey.Digit(0)
         val input = keys.fold(AmountInput()) { acc, key -> acc.press(key) }
 
-        assertEquals("1 234,0 ₴", uk.formatInput(input).replace(' ', ' '))
-        assertEquals("0 ₴", uk.formatInput(AmountInput()).replace(' ', ' '))
-        assertEquals("0, ₴", uk.formatInput(AmountInput().press(AmountKey.DecimalSeparator)).replace(' ', ' '))
+        assertEquals("1 234,0 ₴", uk.formatInput(input).replace('\u00A0', ' '))
+        assertEquals("0 ₴", uk.formatInput(AmountInput()).replace('\u00A0', ' '))
+        assertEquals("0, ₴", uk.formatInput(AmountInput().press(AmountKey.DecimalSeparator)).replace('\u00A0', ' '))
     }
 
     @Test

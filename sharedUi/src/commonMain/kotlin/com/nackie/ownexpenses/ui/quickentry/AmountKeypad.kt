@@ -23,7 +23,6 @@ import com.nackie.ownexpenses.domain.model.AmountKey
 import com.nackie.ownexpenses.ui.UiTestTags
 import com.nackie.ownexpenses.ui.resources.Res
 import com.nackie.ownexpenses.ui.resources.ic_backspace
-import com.nackie.ownexpenses.ui.resources.quick_entry_add
 import com.nackie.ownexpenses.ui.resources.quick_entry_delete_digit
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -46,6 +45,7 @@ private val DigitRows = listOf(listOf(1, 2, 3), listOf(4, 5, 6), listOf(7, 8, 9)
 @Composable
 internal fun AmountKeypad(
     decimalSeparator: String,
+    submitLabel: String,
     canSubmit: Boolean,
     onKey: (AmountKey) -> Unit,
     onSubmit: () -> Unit,
@@ -85,7 +85,7 @@ internal fun AmountKeypad(
                     .height(KeyHeight * 4 + KeySpacing * 3)
                     .testTag(UiTestTags.ADD_BUTTON),
         ) {
-            Text(stringResource(Res.string.quick_entry_add), style = MaterialTheme.typography.titleMedium, maxLines = 1)
+            Text(submitLabel, style = MaterialTheme.typography.titleMedium, maxLines = 1)
         }
     }
 }

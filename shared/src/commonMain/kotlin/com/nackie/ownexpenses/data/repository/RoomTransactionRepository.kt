@@ -10,6 +10,7 @@ import com.nackie.ownexpenses.data.local.toEntity
 import com.nackie.ownexpenses.domain.model.Period
 import com.nackie.ownexpenses.domain.model.PeriodTotals
 import com.nackie.ownexpenses.domain.model.Transaction
+import com.nackie.ownexpenses.domain.model.TransactionDetails
 import com.nackie.ownexpenses.domain.model.TransactionInput
 import com.nackie.ownexpenses.domain.model.TransactionType
 import com.nackie.ownexpenses.domain.repository.TransactionRepository
@@ -53,6 +54,12 @@ internal class RoomTransactionRepository(
             .observeTopLevelCategoryUsage(period.start, period.endInclusive)
             .map { rows -> rows.associate { it.categoryId to it.total } }
             .distinctUntilChanged()
+
+    override fun observeTransactionDetails(period: Period): Flow<List<TransactionDetails>> =
+        dao.observeWithCategories(period.start, period.endInclusive).map { rows -> rows.map { it.toDomain() } }
+
+    override suspend fun getTransactionDetailsChronologically(period: Period): List<TransactionDetails> =
+        dao.getWithCategoriesChronologically(period.start, period.endInclusive).map { it.toDomain() }
 
     override suspend fun getTransaction(id: Long): Transaction? = dao.getById(id)?.toDomain()
 
