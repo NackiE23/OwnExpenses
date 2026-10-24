@@ -26,6 +26,7 @@ import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
 import kotlin.time.Instant
 
 /** Money formatter matching the UI language (decimal comma for Ukrainian). */
@@ -94,13 +95,26 @@ internal fun Long.toLocalDateFromUtcMillis(): LocalDate =
     Instant.fromEpochMilliseconds(this).toLocalDateTime(TimeZone.UTC).date
 
 @Composable
-private fun dayMonth(date: LocalDate): String =
+internal fun dayMonth(date: LocalDate): String =
     stringResource(Res.string.date_day_month, date.day.toString(), monthWithDay(date))
 
 @Composable
-private fun dayMonthYear(date: LocalDate): String =
+internal fun dayMonthYear(date: LocalDate): String =
     stringResource(Res.string.date_day_month_year, date.day.toString(), monthWithDay(date), date.year.toString())
 
 @Composable
 private fun monthWithDay(date: LocalDate): String =
     stringArrayResource(Res.array.months_with_day)[date.month.number - 1]
+
+/** "Жов", "Oct": axis labels where a full name does not fit. */
+@Composable
+internal fun monthShort(date: LocalDate): String =
+    stringArrayResource(Res.array.months_standalone)[date.month.number - 1].take(SHORT_MONTH_LENGTH)
+
+/** "45%"; shares above zero but below one percent show as "<1%" instead of "0%". */
+internal fun percentLabel(share: Float): String {
+    val percent = (share * 100).roundToInt()
+    return if (percent == 0 && share > 0f) "<1%" else "$percent%"
+}
+
+private const val SHORT_MONTH_LENGTH = 3

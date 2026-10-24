@@ -2,6 +2,7 @@ package com.nackie.ownexpenses.di
 
 import androidx.room.RoomDatabase
 import com.nackie.ownexpenses.AppInitializer
+import com.nackie.ownexpenses.backup.BackupService
 import com.nackie.ownexpenses.data.local.AppDatabase
 import com.nackie.ownexpenses.data.local.buildAppDatabase
 import com.nackie.ownexpenses.data.repository.DataStoreSettingsRepository
@@ -19,6 +20,8 @@ import com.nackie.ownexpenses.presentation.history.HistoryViewModel
 import com.nackie.ownexpenses.presentation.home.HomeViewModel
 import com.nackie.ownexpenses.presentation.quickentry.QuickEntryViewModel
 import com.nackie.ownexpenses.presentation.settings.SettingsViewModel
+import com.nackie.ownexpenses.presentation.statistics.StatisticsViewModel
+import com.nackie.ownexpenses.presentation.widget.WidgetSnapshotSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -45,6 +48,9 @@ val sharedModule: Module =
         single<TodayProvider> { SystemTodayProvider(get()) }
         single { PeriodSelection(get()) }
 
+        single { BackupService(get(), get(), get()) }
+        single { WidgetSnapshotSource(get(), get(), get()) }
+
         single { DefaultCategorySeeder(get(), get(), get()) }
         single { AppInitializer(get(), CoroutineScope(SupervisorJob() + Dispatchers.Default)) }
 
@@ -52,6 +58,7 @@ val sharedModule: Module =
         viewModelOf(::QuickEntryViewModel)
         viewModelOf(::HistoryViewModel)
         viewModelOf(::SettingsViewModel)
+        viewModelOf(::StatisticsViewModel)
         viewModelOf(::AppViewModel)
     }
 

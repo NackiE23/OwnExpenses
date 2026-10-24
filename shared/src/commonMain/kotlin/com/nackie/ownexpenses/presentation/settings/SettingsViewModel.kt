@@ -2,6 +2,10 @@ package com.nackie.ownexpenses.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nackie.ownexpenses.backup.BackupError
+import com.nackie.ownexpenses.backup.BackupReadResult
+import com.nackie.ownexpenses.backup.BackupService
+import com.nackie.ownexpenses.backup.RestorableBackup
 import com.nackie.ownexpenses.domain.PeriodSelection
 import com.nackie.ownexpenses.domain.TodayProvider
 import com.nackie.ownexpenses.domain.model.AppSettings
@@ -22,43 +26,86 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
+import kotlin.time.Instant
 
 data class SettingsUiState(
     val settings: AppSettings = AppSettings(),
     /** The period selected on the other tabs; offered as the default export range. */
     val selectedPeriod: Period,
     val today: LocalDate,
-    val isExporting: Boolean = false,
+    /** Export, backup or restore in progress. */
+    val isBusy: Boolean = false,
+    /** A valid backup waiting for the user to confirm that it replaces all data. */
+    val pendingRestore: RestoreSummary? = null,
 )
 
-/** Where the exported file goes: a folder picked by the user, or the system share sheet. */
+data class RestoreSummary(
+    val categoryCount: Int,
+    val transactionCount: Int,
+    val createdAt: Instant?,
+)
+
+/** Where a file goes: a folder picked by the user, or the system share sheet. */
 enum class ExportTarget {
     SAVE,
     SHARE,
 }
 
+enum class FileKind {
+    CSV_EXPORT,
+    BACKUP,
+}
+
+/** A file the UI hands to the platform. */
+data class OutgoingFile(
+    val fileName: String,
+    val mimeType: String,
+    val content: String,
+    val kind: FileKind,
+    /** Records in the file, for the confirmation message. */
+    val recordCount: Int,
+)
+
 sealed interface SettingsEvent {
-    /** The UI hands [content] to the platform as a file named [fileName]. */
-    data class ExportReady(
-        val fileName: String,
-        val content: String,
-        val recordCount: Int,
+    data class FileReady(
+        val file: OutgoingFile,
         val target: ExportTarget,
+    ) : SettingsEvent
+
+    data class RestoreFailed(
+        val error: BackupError,
+    ) : SettingsEvent
+
+    data class Restored(
+        val transactionCount: Int,
     ) : SettingsEvent
 }
 
-/** "More" tab: theme, CSV delimiter, (fixed) currency and CSV export. */
+/** "More" tab: theme, CSV delimiter, (fixed) currency, CSV export, backup and restore. */
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val transactionRepository: TransactionRepository,
+    private val backupService: BackupService,
     periodSelection: PeriodSelection,
     private val todayProvider: TodayProvider,
 ) : ViewModel() {
-    private val exporting = MutableStateFlow(false)
+    private val busy = MutableStateFlow(false)
+    private val pendingRestore = MutableStateFlow<RestorableBackup?>(null)
 
     val uiState: StateFlow<SettingsUiState> =
-        combine(settingsRepository.settings, periodSelection.period, exporting) { settings, period, isExporting ->
-            SettingsUiState(settings, period, todayProvider.today(), isExporting)
+        combine(
+            settingsRepository.settings,
+            periodSelection.period,
+            busy,
+            pendingRestore,
+        ) { settings, period, isBusy, pending ->
+            SettingsUiState(
+                settings = settings,
+                selectedPeriod = period,
+                today = todayProvider.today(),
+                isBusy = isBusy,
+                pendingRestore = pending?.let { RestoreSummary(it.categoryCount, it.transactionCount, it.createdAt) },
+            )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
@@ -83,17 +130,74 @@ class SettingsViewModel(
     fun export(
         period: Period,
         target: ExportTarget,
-    ) {
-        if (exporting.value) return
-        exporting.value = true
+    ) = runBusy {
+        val settings = settingsRepository.settings.first()
+        val rows = transactionRepository.getTransactionDetailsChronologically(period)
+        val file =
+            OutgoingFile(
+                fileName = CsvExporter.fileName(period),
+                mimeType = CsvExporter.MIME_TYPE,
+                content = CsvExporter.export(rows, settings.csvDelimiter, settings.currencyCode),
+                kind = FileKind.CSV_EXPORT,
+                recordCount = rows.size,
+            )
+        eventChannel.send(SettingsEvent.FileReady(file, target))
+    }
+
+    fun createBackup(target: ExportTarget) =
+        runBusy {
+            val backup = backupService.createBackup()
+            val file =
+                OutgoingFile(
+                    fileName = backup.fileName,
+                    mimeType = BackupService.MIME_TYPE,
+                    content = backup.content,
+                    kind = FileKind.BACKUP,
+                    recordCount = backup.transactionCount,
+                )
+            eventChannel.send(SettingsEvent.FileReady(file, target))
+        }
+
+    /** Checks a picked file; a valid backup waits in [SettingsUiState.pendingRestore] for confirmation. */
+    fun openBackup(content: String) {
+        when (val result = backupService.read(content)) {
+            is BackupReadResult.Valid -> {
+                pendingRestore.value = result.backup
+            }
+
+            is BackupReadResult.Invalid -> {
+                viewModelScope.launch { eventChannel.send(SettingsEvent.RestoreFailed(result.error)) }
+            }
+        }
+    }
+
+    /** The only confirmed action in the app: restoring cannot be undone. */
+    fun confirmRestore() {
+        val backup = pendingRestore.value ?: return
+        pendingRestore.value = null
+        runBusy {
+            val event =
+                if (backupService.restore(backup)) {
+                    SettingsEvent.Restored(backup.transactionCount)
+                } else {
+                    SettingsEvent.RestoreFailed(BackupError.RESTORE_FAILED)
+                }
+            eventChannel.send(event)
+        }
+    }
+
+    fun cancelRestore() {
+        pendingRestore.value = null
+    }
+
+    private fun runBusy(block: suspend () -> Unit) {
+        if (busy.value) return
+        busy.value = true
         viewModelScope.launch {
             try {
-                val settings = settingsRepository.settings.first()
-                val rows = transactionRepository.getTransactionDetailsChronologically(period)
-                val content = CsvExporter.export(rows, settings.csvDelimiter, settings.currencyCode)
-                eventChannel.send(SettingsEvent.ExportReady(CsvExporter.fileName(period), content, rows.size, target))
+                block()
             } finally {
-                exporting.value = false
+                busy.value = false
             }
         }
     }

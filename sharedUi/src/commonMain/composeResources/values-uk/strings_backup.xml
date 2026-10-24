@@ -1,0 +1,18 @@
+<resources>
+    <string name="backup_section">Резервна копія</string>
+    <string name="backup_create">Створити резервну копію</string>
+    <string name="backup_create_hint">Усі категорії, записи й налаштування в одному файлі JSON</string>
+    <string name="backup_restore">Відновити з резервної копії</string>
+    <string name="backup_restore_hint">Замінює всі поточні дані</string>
+    <string name="backup_saved">Резервну копію збережено, записів: %1$s</string>
+    <string name="restore_confirm_title">Замінити всі дані?</string>
+    <string name="restore_confirm_text">Усі поточні категорії й записи буде замінено даними з копії від %1$s: категорій %2$s, записів %3$s. Цю дію не можна скасувати.</string>
+    <string name="restore_unknown_date">невідомої дати</string>
+    <string name="restore_confirm">Замінити</string>
+    <string name="restored">Дані відновлено, записів: %1$s</string>
+    <string name="restore_error_not_backup">Цей файл не є резервною копією OwnExpenses</string>
+    <string name="restore_error_newer">Копію створено новішою версією застосунку, оновіть його</string>
+    <string name="restore_error_invalid">Копія пошкоджена, дані не змінено</string>
+    <string name="restore_error_write">Не вдалося відновити, дані не змінено</string>
+    <string name="open_failed">Не вдалося прочитати файл</string>
+</resources>

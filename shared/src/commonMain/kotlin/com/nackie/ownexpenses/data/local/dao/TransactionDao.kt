@@ -15,6 +15,11 @@ internal data class TypeTotal(
     val total: Long,
 )
 
+internal data class DayTotal(
+    val date: LocalDate,
+    val total: Long,
+)
+
 internal data class CategoryTotal(
     @ColumnInfo(name = "category_id")
     val categoryId: Long,
@@ -74,6 +79,45 @@ internal interface TransactionDao {
         from: LocalDate,
         to: LocalDate,
     ): Flow<List<CategoryTotal>>
+
+    /** Sums per day; days without records are absent. */
+    @Query(
+        """
+        SELECT date, SUM(amount_minor) AS total
+        FROM transactions
+        WHERE type = :type AND date BETWEEN :from AND :to
+        GROUP BY date
+        """,
+    )
+    fun observeDailyTotals(
+        type: TransactionType,
+        from: LocalDate,
+        to: LocalDate,
+    ): Flow<List<DayTotal>>
+
+    /** Sums per category or subcategory as recorded, without rolling subcategories up. */
+    @Query(
+        """
+        SELECT category_id, SUM(amount_minor) AS total
+        FROM transactions
+        WHERE type = :type AND date BETWEEN :from AND :to
+        GROUP BY category_id
+        """,
+    )
+    fun observeTotalsPerCategory(
+        type: TransactionType,
+        from: LocalDate,
+        to: LocalDate,
+    ): Flow<List<CategoryTotal>>
+
+    @Query("SELECT * FROM transactions ORDER BY id")
+    suspend fun getAll(): List<TransactionEntity>
+
+    @Insert
+    suspend fun insertAll(transactions: List<TransactionEntity>)
+
+    @Query("DELETE FROM transactions")
+    suspend fun deleteAll()
 
     /** Newest first: by date, then by the moment of entry. */
     @Query("$TRANSACTIONS_WITH_CATEGORIES ORDER BY t.date DESC, t.created_at DESC, t.id DESC")

@@ -16,6 +16,24 @@ internal interface CategoryDao {
     @Query("SELECT * FROM categories WHERE id = :id")
     suspend fun getById(id: Long): CategoryEntity?
 
+    /** Top-level categories first, so the result can be inserted in order. */
+    @Query("SELECT * FROM categories ORDER BY parent_id IS NOT NULL, id")
+    suspend fun getAll(): List<CategoryEntity>
+
+    @Insert
+    suspend fun insertAll(categories: List<CategoryEntity>)
+
+    /**
+     * Subcategories first: the parent foreign key is RESTRICT, which SQLite checks per row, so a
+     * single DELETE of everything fails as soon as a parent goes before its children.
+     */
+    @Query("DELETE FROM categories WHERE parent_id IS NOT NULL")
+    suspend fun deleteAllSubcategories()
+
+    /** Call [deleteAllSubcategories] first. */
+    @Query("DELETE FROM categories")
+    suspend fun deleteAll()
+
     @Query("SELECT COUNT(*) FROM categories")
     suspend fun count(): Int
 

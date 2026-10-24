@@ -22,8 +22,8 @@ internal class DataStoreSettingsRepository(
         dataStore.data
             .map { preferences ->
                 AppSettings(
-                    csvDelimiter = preferences[CSV_DELIMITER].toCsvDelimiter(),
-                    themeMode = preferences[THEME_MODE].toThemeMode(),
+                    csvDelimiter = CsvDelimiter.fromKey(preferences[CSV_DELIMITER]) ?: AppSettings().csvDelimiter,
+                    themeMode = ThemeMode.fromKey(preferences[THEME_MODE]) ?: AppSettings().themeMode,
                 )
             }.distinctUntilChanged()
 
@@ -48,24 +48,3 @@ internal class DataStoreSettingsRepository(
         val DEFAULT_CATEGORIES_SEEDED = booleanPreferencesKey("default_categories_seeded")
     }
 }
-
-private val CsvDelimiter.key: String
-    get() =
-        when (this) {
-            CsvDelimiter.SEMICOLON -> "semicolon"
-            CsvDelimiter.COMMA -> "comma"
-        }
-
-private fun String?.toCsvDelimiter(): CsvDelimiter =
-    CsvDelimiter.entries.firstOrNull { it.key == this } ?: AppSettings().csvDelimiter
-
-private val ThemeMode.key: String
-    get() =
-        when (this) {
-            ThemeMode.SYSTEM -> "system"
-            ThemeMode.LIGHT -> "light"
-            ThemeMode.DARK -> "dark"
-        }
-
-private fun String?.toThemeMode(): ThemeMode =
-    ThemeMode.entries.firstOrNull { it.key == this } ?: AppSettings().themeMode

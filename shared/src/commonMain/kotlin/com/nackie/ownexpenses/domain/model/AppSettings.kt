@@ -11,17 +11,34 @@ data class AppSettings(
     }
 }
 
-/** CSV field delimiter. The decimal separator follows from it: comma for `;`, dot for `,`. */
+/**
+ * CSV field delimiter. The decimal separator follows from it: comma for `;`, dot for `,`.
+ * [key] is how it is stored (settings, backups) and must never change.
+ */
 enum class CsvDelimiter(
     val char: Char,
     val decimalSeparator: Char,
+    val key: String,
 ) {
-    SEMICOLON(';', ','),
-    COMMA(',', '.'),
+    SEMICOLON(';', ',', "semicolon"),
+    COMMA(',', '.', "comma"),
+    ;
+
+    companion object {
+        fun fromKey(key: String?): CsvDelimiter? = entries.firstOrNull { it.key == key }
+    }
 }
 
-enum class ThemeMode {
-    SYSTEM,
-    LIGHT,
-    DARK,
+/** [key] is how it is stored (settings, backups) and must never change. */
+enum class ThemeMode(
+    val key: String,
+) {
+    SYSTEM("system"),
+    LIGHT("light"),
+    DARK("dark"),
+    ;
+
+    companion object {
+        fun fromKey(key: String?): ThemeMode? = entries.firstOrNull { it.key == key }
+    }
 }

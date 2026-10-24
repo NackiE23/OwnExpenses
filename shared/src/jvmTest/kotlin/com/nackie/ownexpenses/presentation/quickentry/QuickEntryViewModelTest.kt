@@ -12,6 +12,7 @@ import com.nackie.ownexpenses.domain.model.CategoryWithSubcategories
 import com.nackie.ownexpenses.domain.model.TransactionType
 import com.nackie.ownexpenses.presentation.FakeTodayProvider
 import com.nackie.ownexpenses.presentation.MainDispatcherTest
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
@@ -149,6 +150,16 @@ internal class QuickEntryViewModelTest : MainDispatcherTest() {
                 }
                 assertNull(transactions.getTransaction(added.transactionId))
             }
+        }
+
+    @Test
+    fun opensByCategoryIdForTheWidget() =
+        runTest {
+            viewModel.openCategory(transport.category.id)
+
+            val state = viewModel.uiState.filterNotNull().first()
+            assertEquals("Transport", state.category.name)
+            assertEquals(listOf("Taxi", "Bus"), state.subcategories.map { it.name })
         }
 
     @Test

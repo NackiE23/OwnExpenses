@@ -4,7 +4,6 @@
     <string name="tab_statistics">Statistics</string>
     <string name="tab_more">More</string>
 
-    <string name="placeholder_coming_soon">Coming soon</string>
 
     <!-- Default categories, created once on first launch in the device language. -->
     <string name="category_groceries">Groceries</string>

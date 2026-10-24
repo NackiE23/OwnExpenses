@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name" translatable="false">Expenses</string>
+
+    <!-- Home-screen widget -->
+    <string name="widget_label">Quick expense</string>
+    <string name="widget_description">Balance and your three most used categories</string>
+    <string name="widget_balance">Balance</string>
+    <string name="widget_no_categories">Add a first expense in the app</string>
 </resources>

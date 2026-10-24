@@ -1,0 +1,20 @@
+<resources>
+    <string name="backup_section">Backup</string>
+    <string name="backup_create">Create backup</string>
+    <string name="backup_create_hint">All categories, records and settings in one JSON file</string>
+    <string name="backup_restore">Restore from backup</string>
+    <string name="backup_restore_hint">Replaces all current data</string>
+    <!-- %1$s number of records -->
+    <string name="backup_saved">Backup saved, records: %1$s</string>
+    <string name="restore_confirm_title">Replace all data?</string>
+    <!-- %1$s backup date, %2$s categories, %3$s records -->
+    <string name="restore_confirm_text">All current categories and records will be replaced with the backup from %1$s: categories %2$s, records %3$s. This cannot be undone.</string>
+    <string name="restore_unknown_date">an unknown date</string>
+    <string name="restore_confirm">Replace</string>
+    <string name="restored">Data restored, records: %1$s</string>
+    <string name="restore_error_not_backup">This file is not an OwnExpenses backup</string>
+    <string name="restore_error_newer">The backup was made by a newer version of the app; please update it</string>
+    <string name="restore_error_invalid">The backup is damaged; nothing was changed</string>
+    <string name="restore_error_write">Could not restore; your data was not changed</string>
+    <string name="open_failed">Could not read the file</string>
+</resources>

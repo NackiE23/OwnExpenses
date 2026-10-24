@@ -13,6 +13,7 @@ import com.nackie.ownexpenses.domain.model.TransactionType
 import com.nackie.ownexpenses.domain.repository.CategoryRepository
 import com.nackie.ownexpenses.domain.repository.TransactionRepository
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
@@ -85,6 +87,25 @@ class QuickEntryViewModel(
 
     fun open(category: CategoryWithSubcategories) {
         openJob?.cancel()
+        show(category)
+    }
+
+    /** Opens the panel for a top-level category known only by id (e.g. from the widget). */
+    fun openCategory(categoryId: Long) {
+        openJob?.cancel()
+        openJob =
+            viewModelScope.launch {
+                val category = categoryRepository.getCategory(categoryId) ?: return@launch
+                val node =
+                    categoryRepository
+                        .observeCategories(category.type)
+                        .first()
+                        .firstOrNull { it.category.id == categoryId } ?: return@launch
+                show(node)
+            }
+    }
+
+    private fun show(category: CategoryWithSubcategories) {
         val today = todayProvider.today()
         state.value =
             QuickEntryUiState(
@@ -169,23 +190,16 @@ class QuickEntryViewModel(
                     description = current.description,
                 )
             try {
+                val editing = current.editing
                 val event =
-                    when (val editing = current.editing) {
-                        null -> {
-                            QuickEntryEvent.Added(
-                                transactionRepository.addTransaction(input),
-                                current.category.type,
-                            )
-                        }
-
-                        else -> {
-                            QuickEntryEvent.Updated.also {
-                                transactionRepository.updateTransaction(
-                                    editing.id,
-                                    input,
-                                )
-                            }
-                        }
+                    if (editing == null) {
+                        QuickEntryEvent.Added(
+                            persist { transactionRepository.addTransaction(input) },
+                            current.category.type,
+                        )
+                    } else {
+                        persist { transactionRepository.updateTransaction(editing.id, input) }
+                        QuickEntryEvent.Updated
                     }
                 state.value = null
                 eventChannel.send(event)
@@ -207,22 +221,26 @@ class QuickEntryViewModel(
     /** Deletes a record without opening the panel (swipe in history). */
     fun deleteTransaction(transactionId: Long) {
         viewModelScope.launch {
-            transactionRepository
-                .deleteTransaction(
-                    transactionId,
-                )?.let { eventChannel.send(QuickEntryEvent.Deleted(it)) }
+            val deleted = persist { transactionRepository.deleteTransaction(transactionId) } ?: return@launch
+            eventChannel.send(QuickEntryEvent.Deleted(deleted))
         }
     }
 
     /** Undo for [QuickEntryEvent.Added]. */
     fun undoAdd(transactionId: Long) {
-        viewModelScope.launch { transactionRepository.deleteTransaction(transactionId) }
+        viewModelScope.launch { persist { transactionRepository.deleteTransaction(transactionId) } }
     }
 
     /** Undo for [QuickEntryEvent.Deleted]. */
     fun undoDelete(transaction: Transaction) {
-        viewModelScope.launch { transactionRepository.restoreTransaction(transaction) }
+        viewModelScope.launch { persist { transactionRepository.restoreTransaction(transaction) } }
     }
+
+    /**
+     * User-initiated writes complete even if the screen closes meanwhile (the widget panel
+     * finishes its activity right after the snackbar), so a tap never gets lost half-way.
+     */
+    private suspend fun <T> persist(write: suspend () -> T): T = withContext(NonCancellable) { write() }
 
     private fun edit(transform: (QuickEntryUiState) -> QuickEntryUiState) {
         state.update { current -> current?.takeUnless { it.isSaving }?.let(transform) ?: current }

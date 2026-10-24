@@ -1,0 +1,15 @@
+<resources>
+    <string name="stats_total">Expenses for the period</string>
+    <string name="stats_by_day">By day</string>
+    <string name="stats_by_month">By month</string>
+    <string name="stats_by_category">By category</string>
+    <string name="stats_empty">No expenses in this period</string>
+    <string name="stats_without_subcategory">Without subcategory</string>
+    <string name="stats_bar_hint">Tap a bar to see its amount</string>
+    <!-- %1$s day or month, %2$s amount -->
+    <string name="stats_bar_value">%1$s: %2$s</string>
+    <string name="stats_bar_chart_description">Bar chart of expenses, highest %1$s</string>
+    <string name="stats_donut_description">Ring chart of expenses by category</string>
+    <string name="stats_expand">Show subcategories</string>
+    <string name="stats_collapse">Hide subcategories</string>
+</resources>

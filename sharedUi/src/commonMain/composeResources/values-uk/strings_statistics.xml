@@ -1,0 +1,14 @@
+<resources>
+    <string name="stats_total">Витрати за період</string>
+    <string name="stats_by_day">За днями</string>
+    <string name="stats_by_month">За місяцями</string>
+    <string name="stats_by_category">За категоріями</string>
+    <string name="stats_empty">Витрат за цей період немає</string>
+    <string name="stats_without_subcategory">Без підкатегорії</string>
+    <string name="stats_bar_hint">Торкніться стовпчика, щоб побачити суму</string>
+    <string name="stats_bar_value">%1$s: %2$s</string>
+    <string name="stats_bar_chart_description">Стовпчикова діаграма витрат, найбільше %1$s</string>
+    <string name="stats_donut_description">Кільцева діаграма витрат за категоріями</string>
+    <string name="stats_expand">Показати підкатегорії</string>
+    <string name="stats_collapse">Сховати підкатегорії</string>
+</resources>

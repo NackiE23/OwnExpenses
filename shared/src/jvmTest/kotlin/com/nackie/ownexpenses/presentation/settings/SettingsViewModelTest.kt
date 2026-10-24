@@ -1,6 +1,8 @@
 package com.nackie.ownexpenses.presentation.settings
 
 import app.cash.turbine.test
+import com.nackie.ownexpenses.backup.BackupError
+import com.nackie.ownexpenses.backup.BackupService
 import com.nackie.ownexpenses.data.FakeSettingsRepository
 import com.nackie.ownexpenses.data.MutableClock
 import com.nackie.ownexpenses.data.createTestDatabase
@@ -36,7 +38,14 @@ internal class SettingsViewModelTest : MainDispatcherTest() {
     fun setUp() {
         database = createTestDatabase()
         transactions = RoomTransactionRepository(database, MutableClock())
-        viewModel = SettingsViewModel(settings, transactions, PeriodSelection(today), today)
+        viewModel =
+            SettingsViewModel(
+                settings,
+                transactions,
+                BackupService(database, settings, MutableClock()),
+                PeriodSelection(today),
+                today,
+            )
     }
 
     @AfterTest
@@ -55,11 +64,16 @@ internal class SettingsViewModelTest : MainDispatcherTest() {
             viewModel.events.test {
                 viewModel.export(Period.monthOf(LocalDate(2026, 10, 1)), ExportTarget.SHARE)
 
-                val ready = assertIs<SettingsEvent.ExportReady>(awaitItem())
-                assertEquals("ownexpenses_2026-10-01_2026-10-31.csv", ready.fileName)
-                assertEquals(1, ready.recordCount)
+                val ready = assertIs<SettingsEvent.FileReady>(awaitItem())
+                assertEquals("ownexpenses_2026-10-01_2026-10-31.csv", ready.file.fileName)
+                assertEquals("text/csv", ready.file.mimeType)
+                assertEquals(FileKind.CSV_EXPORT, ready.file.kind)
+                assertEquals(1, ready.file.recordCount)
                 assertEquals(ExportTarget.SHARE, ready.target)
-                assertTrue(ready.content.contains("2026-10-17,expense,Кафе,,327.00,UAH,Круасани\r\n"), ready.content)
+                assertTrue(
+                    ready.file.content.contains("2026-10-17,expense,Кафе,,327.00,UAH,Круасани\r\n"),
+                    ready.file.content,
+                )
             }
         }
 
@@ -69,10 +83,57 @@ internal class SettingsViewModelTest : MainDispatcherTest() {
             viewModel.events.test {
                 viewModel.export(Period.AllTime, ExportTarget.SAVE)
 
-                val ready = assertIs<SettingsEvent.ExportReady>(awaitItem())
-                assertEquals(0, ready.recordCount)
-                assertEquals(2, ready.content.split("\r\n").size)
+                val ready = assertIs<SettingsEvent.FileReady>(awaitItem())
+                assertEquals(0, ready.file.recordCount)
+                assertEquals(
+                    2,
+                    ready.file.content
+                        .split("\r\n")
+                        .size,
+                )
             }
+        }
+
+    @Test
+    fun backupThenRestoreAfterConfirmation() =
+        runTest {
+            val cafe = database.insertCategory("Кафе", TransactionType.EXPENSE)
+            transactions.addTransaction(TransactionInput(cafe, 89_00, LocalDate(2026, 10, 17)))
+
+            viewModel.events.test {
+                viewModel.createBackup(ExportTarget.SAVE)
+                val ready = assertIs<SettingsEvent.FileReady>(awaitItem())
+                assertEquals(FileKind.BACKUP, ready.file.kind)
+                assertEquals("application/json", ready.file.mimeType)
+
+                // Data changes after the backup; restoring brings back the backed-up state.
+                transactions.addTransaction(TransactionInput(cafe, 1_00, LocalDate(2026, 10, 18)))
+                viewModel.openBackup(ready.file.content)
+                viewModel.uiState.test {
+                    var state = awaitItem()
+                    while (state.pendingRestore == null) state = awaitItem()
+                    assertEquals(1, state.pendingRestore.transactionCount)
+                    cancelAndIgnoreRemainingEvents()
+                }
+
+                viewModel.confirmRestore()
+                assertEquals(SettingsEvent.Restored(transactionCount = 1), awaitItem())
+            }
+            assertEquals(1, database.transactionDao().getAll().size)
+        }
+
+    @Test
+    fun brokenFileIsRejectedWithoutTouchingData() =
+        runTest {
+            val cafe = database.insertCategory("Кафе", TransactionType.EXPENSE)
+            transactions.addTransaction(TransactionInput(cafe, 89_00, LocalDate(2026, 10, 17)))
+
+            viewModel.events.test {
+                viewModel.openBackup("date;type;category")
+                assertEquals(SettingsEvent.RestoreFailed(BackupError.NOT_A_BACKUP), awaitItem())
+            }
+            assertEquals(null, viewModel.uiState.value.pendingRestore)
+            assertEquals(1, database.transactionDao().getAll().size)
         }
 
     @Test

@@ -28,6 +28,18 @@ interface TransactionRepository {
         period: Period,
     ): Flow<Map<Long, Long>>
 
+    /** Sums of [type] records within [period] per day; days without records are absent. */
+    fun observeDailyTotals(
+        type: TransactionType,
+        period: Period,
+    ): Flow<Map<LocalDate, Long>>
+
+    /** Sums of [type] records within [period] per category or subcategory id, as recorded. */
+    fun observeTotalsPerCategory(
+        type: TransactionType,
+        period: Period,
+    ): Flow<Map<Long, Long>>
+
     /** Number of records within [period] per top-level category id, subcategories included. */
     fun observeCategoryUsage(period: Period): Flow<Map<Long, Long>>
 
