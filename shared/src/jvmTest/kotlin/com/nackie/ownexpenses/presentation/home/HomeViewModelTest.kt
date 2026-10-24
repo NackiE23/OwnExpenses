@@ -50,11 +50,18 @@ internal class HomeViewModelTest : MainDispatcherTest() {
             transactions = RoomTransactionRepository(database, MutableClock())
             periodSelection = PeriodSelection(today)
             viewModel =
-                HomeViewModel(RoomCategoryRepository(database), transactions, periodSelection, filterSelection, today)
+                HomeViewModel(
+                    RoomCategoryRepository(database),
+                    transactions,
+                    periodSelection,
+                    filterSelection,
+                    today,
+                ).tracked()
         }
 
     @AfterTest
     fun tearDown() {
+        cancelViewModels()
         database.close()
     }
 

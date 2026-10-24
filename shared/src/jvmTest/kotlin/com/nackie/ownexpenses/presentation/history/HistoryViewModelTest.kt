@@ -49,11 +49,12 @@ internal class HistoryViewModelTest : MainDispatcherTest() {
                     periodSelection,
                     filterSelection,
                     today,
-                )
+                ).tracked()
         }
 
     @AfterTest
     fun tearDown() {
+        cancelViewModels()
         database.close()
     }
 

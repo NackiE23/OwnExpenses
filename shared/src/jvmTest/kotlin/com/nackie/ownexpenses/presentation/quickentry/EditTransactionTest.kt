@@ -51,11 +51,12 @@ internal class EditTransactionTest : MainDispatcherTest() {
 
             categories = RoomCategoryRepository(database)
             transactions = RoomTransactionRepository(database, MutableClock())
-            viewModel = QuickEntryViewModel(categories, transactions, FakeTodayProvider(today))
+            viewModel = QuickEntryViewModel(categories, transactions, FakeTodayProvider(today)).tracked()
         }
 
     @AfterTest
     fun tearDown() {
+        cancelViewModels()
         database.close()
     }
 

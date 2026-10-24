@@ -49,11 +49,12 @@ internal class SettingsViewModelTest : MainDispatcherTest() {
                 SumlioImportService(database),
                 PeriodSelection(today),
                 today,
-            )
+            ).tracked()
     }
 
     @AfterTest
     fun tearDown() {
+        cancelViewModels()
         database.close()
     }
 
@@ -172,7 +173,7 @@ internal class SettingsViewModelTest : MainDispatcherTest() {
     @Test
     fun themeChangeReachesTheAppViewModel() =
         runTest {
-            val app = AppViewModel(settings)
+            val app = AppViewModel(settings).tracked()
 
             viewModel.setThemeMode(ThemeMode.DARK)
 

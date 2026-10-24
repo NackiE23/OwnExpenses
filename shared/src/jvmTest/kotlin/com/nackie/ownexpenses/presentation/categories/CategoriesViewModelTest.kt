@@ -30,11 +30,12 @@ internal class CategoriesViewModelTest : MainDispatcherTest() {
     @BeforeTest
     fun setUp() {
         database = createTestDatabase()
-        viewModel = CategoriesViewModel(RoomCategoryRepository(database))
+        viewModel = CategoriesViewModel(RoomCategoryRepository(database)).tracked()
     }
 
     @AfterTest
     fun tearDown() {
+        cancelViewModels()
         database.close()
     }
 

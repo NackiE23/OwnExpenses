@@ -44,11 +44,13 @@ internal class QuickEntryViewModelTest : MainDispatcherTest() {
             transport = RoomCategoryRepository(database).observeCategories(TransactionType.EXPENSE).first().single()
 
             transactions = RoomTransactionRepository(database, MutableClock())
-            viewModel = QuickEntryViewModel(RoomCategoryRepository(database), transactions, FakeTodayProvider(today))
+            viewModel =
+                QuickEntryViewModel(RoomCategoryRepository(database), transactions, FakeTodayProvider(today)).tracked()
         }
 
     @AfterTest
     fun tearDown() {
+        cancelViewModels()
         database.close()
     }
 
