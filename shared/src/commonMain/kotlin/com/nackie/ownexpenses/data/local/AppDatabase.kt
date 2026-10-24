@@ -19,7 +19,7 @@ import kotlinx.coroutines.IO
  */
 @Database(
     entities = [CategoryEntity::class, TransactionEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -40,6 +40,7 @@ internal const val DATABASE_FILE_NAME = "ownexpenses.db"
 
 /** Common configuration applied on top of a platform-specific builder. */
 internal fun RoomDatabase.Builder<AppDatabase>.buildAppDatabase(): AppDatabase =
-    setDriver(BundledSQLiteDriver())
+    addMigrations(*ALL_MIGRATIONS)
+        .setDriver(BundledSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.IO)
         .build()

@@ -109,6 +109,11 @@ class CategoriesViewModel(
         editor.value = CategoryEditor(category.id, parent, category.type, category.name, category.color, category.icon)
     }
 
+    /** Like [startEdit], for a category known only by id (opened from the main screen). */
+    fun startEditById(id: Long) {
+        viewModelScope.launch { categoryRepository.getCategory(id)?.let(::startEdit) }
+    }
+
     fun onNameChange(name: String) = editor.update { it?.copy(name = name.take(MAX_NAME_LENGTH)) }
 
     fun onColorChange(color: Int) = editor.update { it?.copy(color = color) }

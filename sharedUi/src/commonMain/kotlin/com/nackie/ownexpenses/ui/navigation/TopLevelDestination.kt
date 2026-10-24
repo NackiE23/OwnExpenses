@@ -28,12 +28,14 @@ internal data object MoreRoute
 
 /**
  * Categories screen, above the tabs. [type] is a TransactionType name; [create] opens the
- * editor for a new category right away (the "Add" tile).
+ * editor for a new category right away (the "Add" tile), [editId] the editor for that category
+ * (the details panel of a held tile).
  */
 @Serializable
 internal data class ManageCategoriesRoute(
     val type: String,
     val create: Boolean = false,
+    val editId: Long? = null,
 )
 
 /** Bottom navigation tabs, in display order. */

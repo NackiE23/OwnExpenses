@@ -1,5 +1,11 @@
 package com.nackie.ownexpenses.ui.period
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -74,12 +80,23 @@ internal fun PeriodSwitcher(
             Icon(painterResource(Res.drawable.ic_chevron_left), stringResource(Res.string.period_previous))
         }
         TextButton(onClick = { showPicker = true }, modifier = Modifier.weight(1f)) {
-            Text(
-                text = periodLabel(period),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-            )
+            // Slides in the direction of the step, so arrows and swipes show where the period went.
+            AnimatedContent(
+                targetState = period,
+                transitionSpec = {
+                    val forward = targetState.start > initialState.start
+                    (slideInHorizontally { if (forward) it / 2 else -it / 2 } + fadeIn()) togetherWith
+                        (slideOutHorizontally { if (forward) -it / 2 else it / 2 } + fadeOut())
+                },
+                label = "period",
+            ) { shown ->
+                Text(
+                    text = periodLabel(shown),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
         IconButton(onClick = onNext, enabled = canShift) {
             Icon(painterResource(Res.drawable.ic_chevron_right), stringResource(Res.string.period_next))

@@ -87,7 +87,15 @@ fun App(
                 startDestination = CategoriesRoute,
                 modifier = Modifier.padding(innerPadding),
             ) {
-                composable<CategoriesRoute> { HomeScreen(onManageCategories = openCategories) }
+                composable<CategoriesRoute> {
+                    HomeScreen(
+                        onManageCategories = openCategories,
+                        onEditCategory = { category ->
+                            navController.navigate(ManageCategoriesRoute(category.type.name, editId = category.id))
+                        },
+                        onShowOperations = { navController.navigateToTopLevel(TopLevelDestination.OPERATIONS) },
+                    )
+                }
                 composable<OperationsRoute> { OperationsScreen() }
                 composable<StatisticsRoute> { StatisticsScreen() }
                 composable<MoreRoute> {
@@ -100,6 +108,7 @@ fun App(
                     CategoriesScreen(
                         initialType = TransactionType.valueOf(route.type),
                         startWithCreate = route.create,
+                        startWithEditId = route.editId,
                         onBack = { navController.popBackStack() },
                     )
                 }

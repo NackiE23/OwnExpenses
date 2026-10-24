@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="filter_search_hint">Search by description</string>
+    <string name="filter_clear_search">Clear search</string>
+    <string name="filter_open">Filter by categories</string>
+    <string name="filter_title">Categories</string>
+    <string name="filter_hint">Archived categories are included. Nothing selected means all categories.</string>
+    <string name="filter_without_subcategory">Without subcategory</string>
+    <string name="filter_archived">archived</string>
+    <string name="filter_reset">Reset</string>
+    <string name="filter_done">Done</string>
+    <string name="filter_remove">Remove filter %1$s</string>
+    <string name="filter_no_matches">No operations match the filter in this period</string>
+</resources>

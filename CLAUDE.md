@@ -50,7 +50,7 @@ docs/         TZ.md, design-reference/
 
 Пакети (`com.nackie.ownexpenses`):
 
-- `shared`: `domain.model` (моделі), `domain.repository` (інтерфейси репозиторіїв), `data.local` (Room: `AppDatabase`, `entity`, `dao`), `data.settings` (DataStore), `data.repository` (реалізації, сідер категорій), `di` (`sharedModule` + `platformModule` через expect/actual), `AppInitializer` (разовий старт: категорії за замовчуванням), `domain` (`TodayProvider`, `PeriodSelection`: один вибір періоду на всі екрани), `presentation` (ViewModel по пакету на екран: `home`, `quickentry` (додавання, редагування, видалення й undo), `history`, `statistics` (стовпчики й частки категорій як чисті функції), `categories` (керування категоріями: редагування, порядок, архів, видалення з undo), `settings`, `widget` (`WidgetSnapshotSource`); `AppViewModel` для теми; `presentation.format.MoneyFormatter`), `export` (`CsvExporter`), `backup` (`BackupService`: JSON-копія, перевірка, відновлення однією транзакцією), `importing` (`SumlioImportService`: разовий імпорт CSV із Sumlio, `readCsv` за RFC 4180).
+- `shared`: `domain.model` (моделі), `domain.repository` (інтерфейси репозиторіїв), `data.local` (Room: `AppDatabase`, `entity`, `dao`), `data.settings` (DataStore), `data.repository` (реалізації, сідер категорій), `di` (`sharedModule` + `platformModule` через expect/actual), `AppInitializer` (разовий старт: категорії за замовчуванням), `domain` (`TodayProvider`, `PeriodSelection`: один вибір періоду на всі екрани, `OperationsFilterSelection`: фільтр історії, спільний з головним екраном), `presentation` (ViewModel по пакету на екран: `home`, `quickentry` (додавання, редагування, видалення й undo), `history`, `statistics` (стовпчики й частки категорій як чисті функції), `home` (плитки й панель категорії `CategoryDetails`), `categories` (керування категоріями: редагування, порядок, архів, видалення з undo), `settings`, `widget` (`WidgetSnapshotSource`); `AppViewModel` для теми; `presentation.format.MoneyFormatter`), `export` (`CsvExporter`), `backup` (`BackupService`: JSON-копія, перевірка, відновлення однією транзакцією), `importing` (`SumlioImportService`: разовий імпорт CSV із Sumlio, `readCsv` за RFC 4180).
 - `androidApp`: `widget` (Glance-віджет `QuickEntryWidget`, `QuickEntryActivity` — прозора панель вводу поверх домашнього екрана, `WidgetUpdater` оновлює віджет при змінах даних).
 - `sharedUi`: `ui` (`App`, `UiTestTags`), `ui.di` (`uiModule`), `ui.theme`, `ui.navigation`, `ui.components`, `ui.format` (дати, періоди, гроші за мовою UI), `ui.period` (перемикач і діалог періоду), по пакету на екран (`ui.home`, `ui.quickentry`, `ui.operations`, `ui.statistics`, `ui.more`, `ui.categories`). Екран категорій не є вкладкою: маршрут `ManageCategoriesRoute`, нижня панель на ньому схована. Клас ресурсів: `com.nackie.ownexpenses.ui.resources.Res`.
 
@@ -64,7 +64,7 @@ docs/         TZ.md, design-reference/
 
 iOS-таргети (`iosArm64`, `iosSimulatorArm64`) тримають commonMain платформно-нейтральним: Android API там не скомпілюється. Платформний код лише в `androidMain` / `iosMain`; кожен `expect` має `actual` для обох платформ. iOS-klib компілюються й на Windows (без лінкування і Xcode), це перевіряє CI. Таргет `jvm` у `shared` існує лише для тестів: Room-тести в `jvmTest` ганяють справжній SQLite без емулятора.
 
-Схема Room експортується в `shared/schemas/` і комітиться.
+Схема Room експортується в `shared/schemas/` і комітиться. Міграції в `data/local/Migrations.kt` (`ALL_MIGRATIONS`), тести міграцій у `jvmTest` через `MigrationTestHelper` (room-testing). Кольори категорій це ARGB у базі: зміна палітри потребує міграції зі старих кольорів у нові (`CategoryPalette.legacyColors`).
 
 Назви категорій за замовчуванням лежать у рядках `sharedUi` (`category_*`); `shared` отримує їх через `DefaultCategoryNames`. Новий `DefaultCategory` потребує рядків uk/en і гілки в `ResourceDefaultCategoryNames`.
 
@@ -84,6 +84,8 @@ iOS-таргети (`iosArm64`, `iosSimulatorArm64`) тримають commonMain
 - `operations-history.png`: історія. Групи за днями з підсумком дня, рядок операції (іконка категорії, назва, опис, сума), плаваюча кнопка «+».
 - `period-picker.png`: діалог вибору періоду: довільний діапазон, весь час, день, тиждень, рік, місяць. Беремо набір періодів; опцію «місяць від дня виплати» не робимо.
 - `statistics.png`: статистика. Кільцева діаграма за категоріями, список із сумами й відсотками. У нас додається стовпчикова діаграма витрат за днями; блок середніх значень не потрібен.
+- `hold-category-menu.jpg`: панель категорії при утриманні плитки: кількість операцій, сума, частка, підкатегорії, кнопки редагування й операцій.
+- `operations-filtering.jpg`: фільтр історії. Беремо пошук за коментарем і вибір категорій; рахунків, типів операцій і тегів у нас немає.
 
 Вкладки нижньої навігації: Categories (головна), Operations, Statistics, More (налаштування, експорт, резервна копія). Вкладки Accounts немає.
 

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="details_open">Показати подробиці</string>
+    <plurals name="details_operations">
+        <item quantity="one">%1$d операція</item>
+        <item quantity="few">%1$d операції</item>
+        <item quantity="many">%1$d операцій</item>
+        <item quantity="other">%1$d операції</item>
+    </plurals>
+    <string name="details_share">%1$s від періоду</string>
+    <string name="details_edit">Редагувати</string>
+    <string name="details_operations_button">Операції</string>
+</resources>

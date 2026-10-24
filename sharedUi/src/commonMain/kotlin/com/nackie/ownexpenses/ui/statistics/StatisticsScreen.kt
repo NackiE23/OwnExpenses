@@ -39,6 +39,7 @@ import com.nackie.ownexpenses.presentation.statistics.SpendingChart
 import com.nackie.ownexpenses.presentation.statistics.StatisticsUiState
 import com.nackie.ownexpenses.presentation.statistics.StatisticsViewModel
 import com.nackie.ownexpenses.ui.components.CategoryIconBadge
+import com.nackie.ownexpenses.ui.components.categoryContentColor
 import com.nackie.ownexpenses.ui.format.percentLabel
 import com.nackie.ownexpenses.ui.format.rememberMoneyFormatter
 import com.nackie.ownexpenses.ui.period.PeriodSwitcher
@@ -223,11 +224,41 @@ private fun DonutCard(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.fillMaxWidth(),
             )
+            // View-only state like the selected bar: which slice is shown in the centre.
+            var selectedId by remember(shares) { mutableStateOf<Long?>(null) }
+            val selected = shares.firstOrNull { it.category.id == selectedId }
             SpendingDonut(
                 shares = shares.map { it.share to Color(it.category.color) },
                 description = stringResource(Res.string.stats_donut_description),
+                selectedIndex = selected?.let { shares.indexOf(it) },
+                onSelect = { index -> selectedId = index?.let { shares[it].category.id }?.takeIf { it != selectedId } },
             ) {
-                Text(text = formatter.format(totalMinor), style = MaterialTheme.typography.titleMedium)
+                if (selected == null) {
+                    Text(text = formatter.format(totalMinor), style = MaterialTheme.typography.titleMedium)
+                } else {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 36.dp),
+                    ) {
+                        Text(
+                            text = selected.category.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = percentLabel(selected.share),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = categoryContentColor(Color(selected.category.color)),
+                        )
+                        Text(
+                            text = formatter.format(selected.totalMinor),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         }
     }

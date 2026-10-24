@@ -2,6 +2,7 @@ package com.nackie.ownexpenses.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nackie.ownexpenses.domain.OperationsFilterSelection
 import com.nackie.ownexpenses.domain.PeriodSelection
 import com.nackie.ownexpenses.domain.TodayProvider
 import com.nackie.ownexpenses.domain.model.CategoryWithSubcategories
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
@@ -45,9 +47,11 @@ class HomeViewModel(
     private val categoryRepository: CategoryRepository,
     private val transactionRepository: TransactionRepository,
     private val periodSelection: PeriodSelection,
+    private val filterSelection: OperationsFilterSelection,
     private val todayProvider: TodayProvider,
 ) : ViewModel() {
     private val selectedType = MutableStateFlow(TransactionType.EXPENSE)
+    private val detailsCategory = MutableStateFlow<CategoryWithSubcategories?>(null)
 
     private val today: Flow<LocalDate> =
         todayProvider.observeToday().shareIn(viewModelScope, SharingStarted.WhileSubscribed(), replay = 1)
@@ -86,6 +90,38 @@ class HomeViewModel(
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
             initialValue = HomeUiState(period = periodSelection.period.value, today = todayProvider.today()),
         )
+
+    /** The held tile's category over the current period; null while the panel is closed. */
+    val details: StateFlow<CategoryDetails?> =
+        combine(detailsCategory, periodSelection.period, ::Pair)
+            .flatMapLatest { (category, period) ->
+                if (category == null) return@flatMapLatest flowOf(null)
+                val type = category.category.type
+                combine(
+                    categoryRepository.observeCategories(type, includeArchived = true),
+                    transactionRepository.observeTransactionDetails(period),
+                    transactionRepository.observePeriodTotals(period),
+                ) { categories, records, totals ->
+                    // Follows renames and new subcategories; closes if the category is deleted.
+                    categories
+                        .firstOrNull { it.category.id == category.category.id }
+                        ?.let { buildCategoryDetails(it, records, totals.of(type)) }
+                }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
+
+    fun showDetails(category: CategoryWithSubcategories) {
+        detailsCategory.value = category
+    }
+
+    fun hideDetails() {
+        detailsCategory.value = null
+    }
+
+    /** Filters the operations tab to this category before the UI switches to it. */
+    fun showOperations(category: CategoryWithSubcategories) {
+        filterSelection.showOnly(category)
+        hideDetails()
+    }
 
     fun selectType(type: TransactionType) {
         selectedType.value = type

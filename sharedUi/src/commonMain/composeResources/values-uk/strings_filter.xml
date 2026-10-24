@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="filter_search_hint">Пошук за описом</string>
+    <string name="filter_clear_search">Очистити пошук</string>
+    <string name="filter_open">Фільтр за категоріями</string>
+    <string name="filter_title">Категорії</string>
+    <string name="filter_hint">Архівні категорії теж враховано. Якщо нічого не вибрано, показуються всі.</string>
+    <string name="filter_without_subcategory">Без підкатегорії</string>
+    <string name="filter_archived">архів</string>
+    <string name="filter_reset">Скинути</string>
+    <string name="filter_done">Готово</string>
+    <string name="filter_remove">Прибрати фільтр %1$s</string>
+    <string name="filter_no_matches">За цей період немає операцій, що підходять під фільтр</string>
+</resources>

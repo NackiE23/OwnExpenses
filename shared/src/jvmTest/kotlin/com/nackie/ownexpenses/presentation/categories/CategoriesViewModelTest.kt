@@ -61,6 +61,20 @@ internal class CategoriesViewModelTest : MainDispatcherTest() {
         }
 
     @Test
+    fun editorOpensForACategoryKnownById() =
+        runTest {
+            val cafe = database.insertCategory("Cafe", TransactionType.EXPENSE)
+
+            viewModel.uiState.test {
+                viewModel.startEditById(cafe)
+                val editor = awaitUntil { it.editor != null }.editor!!
+                assertEquals(cafe, editor.categoryId)
+                assertEquals("Cafe", editor.name)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
     fun blankNameCannotBeSaved() {
         viewModel.startCreate()
         viewModel.onNameChange("   ")

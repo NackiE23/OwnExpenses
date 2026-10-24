@@ -8,6 +8,7 @@ import com.nackie.ownexpenses.data.insertCategory
 import com.nackie.ownexpenses.data.local.AppDatabase
 import com.nackie.ownexpenses.data.repository.RoomCategoryRepository
 import com.nackie.ownexpenses.data.repository.RoomTransactionRepository
+import com.nackie.ownexpenses.domain.OperationsFilterSelection
 import com.nackie.ownexpenses.domain.PeriodSelection
 import com.nackie.ownexpenses.domain.model.Period
 import com.nackie.ownexpenses.domain.model.PeriodTotals
@@ -26,6 +27,7 @@ internal class HomeViewModelTest : MainDispatcherTest() {
     private lateinit var database: AppDatabase
     private lateinit var transactions: RoomTransactionRepository
     private lateinit var periodSelection: PeriodSelection
+    private val filterSelection = OperationsFilterSelection()
     private lateinit var viewModel: HomeViewModel
     private val today = FakeTodayProvider(LocalDate(2026, 10, 24))
 
@@ -47,7 +49,8 @@ internal class HomeViewModelTest : MainDispatcherTest() {
 
             transactions = RoomTransactionRepository(database, MutableClock())
             periodSelection = PeriodSelection(today)
-            viewModel = HomeViewModel(RoomCategoryRepository(database), transactions, periodSelection, today)
+            viewModel =
+                HomeViewModel(RoomCategoryRepository(database), transactions, periodSelection, filterSelection, today)
         }
 
     @AfterTest
@@ -170,6 +173,53 @@ internal class HomeViewModelTest : MainDispatcherTest() {
                 cancelAndIgnoreRemainingEvents()
             }
         }
+
+    @Test
+    fun heldTileShowsCategoryDetailsOfThePeriod() =
+        runTest {
+            add(transport, 40_00, LocalDate(2026, 10, 2))
+            add(taxi, 150_00, LocalDate(2026, 10, 3))
+            add(taxi, 10_00, LocalDate(2026, 10, 4))
+            add(cafe, 200_00, LocalDate(2026, 10, 5))
+            add(taxi, 999_00, LocalDate(2026, 9, 30))
+
+            val transportTile = awaitTile("Transport")
+            viewModel.details.test {
+                assertEquals(null, awaitItem())
+                viewModel.showDetails(transportTile.category)
+
+                var details = awaitItem()
+                while (details == null) details = awaitItem()
+                assertEquals(3, details.operationCount)
+                assertEquals(200_00, details.totalMinor)
+                // 200 of the month's 400 expenses.
+                assertEquals(0.5f, details.shareOfPeriod)
+                assertEquals(
+                    listOf("Taxi" to 160_00L, null to 40_00L),
+                    details.parts.map {
+                        it.subcategory?.name to
+                            it.totalMinor
+                    },
+                )
+                assertEquals(0.8f, details.parts.first().share)
+
+                viewModel.showOperations(transportTile.category)
+                assertEquals(null, awaitItem())
+                assertEquals(setOf(transport, taxi), filterSelection.filter.value.categoryIds)
+            }
+        }
+
+    private suspend fun awaitTile(name: String): CategoryTile {
+        var tile: CategoryTile? = null
+        viewModel.uiState.test {
+            tile =
+                awaitLoaded { state -> state.tiles.any { it.category.category.name == name } }
+                    .tiles
+                    .first { it.category.category.name == name }
+            cancelAndIgnoreRemainingEvents()
+        }
+        return tile!!
+    }
 
     private suspend fun add(
         categoryId: Long,

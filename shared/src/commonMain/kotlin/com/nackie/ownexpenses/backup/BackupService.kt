@@ -10,6 +10,7 @@ import com.nackie.ownexpenses.data.local.entity.TransactionEntity
 import com.nackie.ownexpenses.domain.model.CsvDelimiter
 import com.nackie.ownexpenses.domain.model.ThemeMode
 import com.nackie.ownexpenses.domain.repository.SettingsRepository
+import com.nackie.ownexpenses.presentation.categories.CategoryPalette
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.SerializationException
@@ -209,7 +210,8 @@ private fun BackupDocument.toRestorable(): RestorableBackup {
                 parentId = category.parentId,
                 name = category.name,
                 type = type,
-                color = category.color.parseColorHex(),
+                // Backups made before the saturated palette get its colors, as the database migration does.
+                color = CategoryPalette.upgrade(category.color.parseColorHex()),
                 icon = category.icon,
                 sortOrder = category.sortOrder,
                 isArchived = category.archived,

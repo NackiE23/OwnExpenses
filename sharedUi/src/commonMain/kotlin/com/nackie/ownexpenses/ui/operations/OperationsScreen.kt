@@ -25,7 +25,10 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nackie.ownexpenses.domain.model.CategoryWithSubcategories
 import com.nackie.ownexpenses.domain.model.Period
 import com.nackie.ownexpenses.domain.model.PeriodTotals
 import com.nackie.ownexpenses.domain.model.TransactionDetails
@@ -52,6 +56,7 @@ import com.nackie.ownexpenses.ui.quickentry.QuickEntryHost
 import com.nackie.ownexpenses.ui.quickentry.UndoSnackbarHost
 import com.nackie.ownexpenses.ui.resources.Res
 import com.nackie.ownexpenses.ui.resources.category_with_subcategory
+import com.nackie.ownexpenses.ui.resources.filter_no_matches
 import com.nackie.ownexpenses.ui.resources.history_delete
 import com.nackie.ownexpenses.ui.resources.history_empty
 import com.nackie.ownexpenses.ui.resources.ic_delete
@@ -73,6 +78,8 @@ internal fun OperationsScreen(
     quickEntryViewModel: QuickEntryViewModel = koinViewModel(),
 ) {
     val state by historyViewModel.uiState.collectAsStateWithLifecycle()
+    val filter by historyViewModel.filter.collectAsStateWithLifecycle()
+    var showFilter by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val formatter = rememberMoneyFormatter()
 
@@ -89,7 +96,26 @@ internal fun OperationsScreen(
             onSelectPeriod = historyViewModel::selectPeriod,
             onEdit = quickEntryViewModel::openForEdit,
             onDelete = quickEntryViewModel::deleteTransaction,
+            filterActions =
+                FilterBarActions(
+                    query = filter.query,
+                    onQueryChange = historyViewModel::setQuery,
+                    onOpenFilter = { showFilter = true },
+                    onRemoveCategory = historyViewModel::removeCategory,
+                ),
             modifier = Modifier.padding(innerPadding),
+        )
+    }
+
+    if (showFilter) {
+        OperationsFilterSheet(
+            selectedIds = filter.categoryIds,
+            expenseCategories = state.expenseCategories,
+            incomeCategories = state.incomeCategories,
+            onToggleCategory = historyViewModel::toggleCategory,
+            onToggleLeaf = historyViewModel::toggleLeaf,
+            onReset = historyViewModel::clearCategories,
+            onDismiss = { showFilter = false },
         )
     }
 
@@ -105,6 +131,7 @@ private fun OperationsContent(
     onSelectPeriod: (Period) -> Unit,
     onEdit: (Long) -> Unit,
     onDelete: (Long) -> Unit,
+    filterActions: FilterBarActions,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -112,7 +139,22 @@ private fun OperationsContent(
         contentPadding = PaddingValues(bottom = 16.dp),
     ) {
         item(key = "header") {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                OperationsSearchBar(
+                    query = filterActions.query,
+                    categoriesFiltered = state.filter.categoryIds.isNotEmpty(),
+                    onQueryChange = filterActions.onQueryChange,
+                    onOpenFilter = filterActions.onOpenFilter,
+                )
+                CategoryFilterChips(
+                    selectedIds = state.filter.categoryIds,
+                    categories = state.expenseCategories + state.incomeCategories,
+                    onOpenFilter = filterActions.onOpenFilter,
+                    onRemove = filterActions.onRemoveCategory,
+                )
                 PeriodSwitcher(
                     period = state.period,
                     today = state.today,
@@ -126,7 +168,10 @@ private fun OperationsContent(
         if (!state.isLoading && state.days.isEmpty()) {
             item(key = "empty") {
                 Text(
-                    text = stringResource(Res.string.history_empty),
+                    text =
+                        stringResource(
+                            if (state.filter.isActive) Res.string.filter_no_matches else Res.string.history_empty,
+                        ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -146,6 +191,14 @@ private fun OperationsContent(
         }
     }
 }
+
+/** Search text and the category filter chips' callbacks, bundled to keep the content signature short. */
+private class FilterBarActions(
+    val query: String,
+    val onQueryChange: (String) -> Unit,
+    val onOpenFilter: () -> Unit,
+    val onRemoveCategory: (CategoryWithSubcategories) -> Unit,
+)
 
 @Composable
 private fun PeriodTotalsRow(

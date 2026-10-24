@@ -1,6 +1,7 @@
 package com.nackie.ownexpenses.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,12 +35,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nackie.ownexpenses.domain.model.Category
 import com.nackie.ownexpenses.domain.model.CategoryWithSubcategories
 import com.nackie.ownexpenses.domain.model.Period
 import com.nackie.ownexpenses.domain.model.TransactionType
@@ -49,12 +54,15 @@ import com.nackie.ownexpenses.presentation.home.HomeViewModel
 import com.nackie.ownexpenses.presentation.quickentry.QuickEntryViewModel
 import com.nackie.ownexpenses.ui.UiTestTags
 import com.nackie.ownexpenses.ui.components.CategoryIconBadge
+import com.nackie.ownexpenses.ui.components.categoryContentColor
 import com.nackie.ownexpenses.ui.format.rememberMoneyFormatter
 import com.nackie.ownexpenses.ui.period.PeriodSwitcher
+import com.nackie.ownexpenses.ui.period.periodSwipe
 import com.nackie.ownexpenses.ui.quickentry.QuickEntryHost
 import com.nackie.ownexpenses.ui.quickentry.UndoSnackbarHost
 import com.nackie.ownexpenses.ui.resources.Res
 import com.nackie.ownexpenses.ui.resources.balance_title
+import com.nackie.ownexpenses.ui.resources.details_open
 import com.nackie.ownexpenses.ui.resources.home_add_category
 import com.nackie.ownexpenses.ui.resources.home_edit_categories
 import com.nackie.ownexpenses.ui.resources.home_no_categories
@@ -71,11 +79,14 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 internal fun HomeScreen(
     onManageCategories: (type: TransactionType, create: Boolean) -> Unit,
+    onEditCategory: (Category) -> Unit,
+    onShowOperations: () -> Unit,
     modifier: Modifier = Modifier,
     homeViewModel: HomeViewModel = koinViewModel(),
     quickEntryViewModel: QuickEntryViewModel = koinViewModel(),
 ) {
     val state by homeViewModel.uiState.collectAsStateWithLifecycle()
+    val details by homeViewModel.details.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val formatter = rememberMoneyFormatter()
 
@@ -92,12 +103,29 @@ internal fun HomeScreen(
             onSelectPeriod = homeViewModel::selectPeriod,
             onSelectType = homeViewModel::selectType,
             onTileClick = quickEntryViewModel::open,
+            onTileHold = homeViewModel::showDetails,
             onManageCategories = { create -> onManageCategories(state.selectedType, create) },
             modifier = Modifier.padding(innerPadding),
         )
     }
 
     QuickEntryHost(snackbarHostState = snackbarHostState, formatter = formatter)
+
+    details?.let { shown ->
+        CategoryDetailsSheet(
+            details = shown,
+            formatter = formatter,
+            onEdit = {
+                homeViewModel.hideDetails()
+                onEditCategory(shown.category.category)
+            },
+            onShowOperations = {
+                homeViewModel.showOperations(shown.category)
+                onShowOperations()
+            },
+            onDismiss = homeViewModel::hideDetails,
+        )
+    }
 }
 
 @Composable
@@ -109,12 +137,20 @@ private fun HomeContent(
     onSelectPeriod: (Period) -> Unit,
     onSelectType: (TransactionType) -> Unit,
     onTileClick: (CategoryWithSubcategories) -> Unit,
+    onTileHold: (CategoryWithSubcategories) -> Unit,
     onManageCategories: (create: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 160.dp),
-        modifier = modifier.fillMaxSize(),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .periodSwipe(
+                    enabled = state.period != Period.AllTime,
+                    onPrevious = onPreviousPeriod,
+                    onNext = onNextPeriod,
+                ),
         contentPadding = PaddingValues(16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -159,6 +195,7 @@ private fun HomeContent(
                 tile = tile,
                 formatter = formatter,
                 onClick = { onTileClick(tile.category) },
+                onLongClick = { onTileHold(tile.category) },
                 modifier = Modifier.animateItem(),
             )
         }
@@ -268,11 +305,27 @@ private fun CategoryTileCard(
     tile: CategoryTile,
     formatter: MoneyFormatter,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val category = tile.category.category
     val color = Color(category.color)
-    OutlinedCard(onClick = onClick, modifier = modifier.testTag(UiTestTags.CATEGORY_TILE)) {
+    val haptics = LocalHapticFeedback.current
+    // Tap records an expense; holding (the system long-press time) opens the category details.
+    OutlinedCard(
+        modifier =
+            modifier
+                .testTag(UiTestTags.CATEGORY_TILE)
+                .clip(CardDefaults.outlinedShape)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClickLabel = stringResource(Res.string.details_open),
+                    onLongClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onLongClick()
+                    },
+                ),
+    ) {
         Row(
             modifier = Modifier.padding(12.dp).heightIn(min = 48.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -289,7 +342,7 @@ private fun CategoryTileCard(
                 Text(
                     text = formatter.format(tile.totalMinor),
                     style = MaterialTheme.typography.titleMedium,
-                    color = color,
+                    color = categoryContentColor(color),
                     maxLines = 1,
                 )
             }

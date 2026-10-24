@@ -18,6 +18,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
@@ -25,15 +26,23 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import com.nackie.ownexpenses.presentation.statistics.BarGranularity
 import com.nackie.ownexpenses.presentation.statistics.SpendingChart
 import com.nackie.ownexpenses.ui.format.dayMonth
 import com.nackie.ownexpenses.ui.format.monthShort
 import com.nackie.ownexpenses.ui.format.monthYear
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.sqrt
 
 private const val BAR_FILL = 0.7f
 private const val MIN_VISIBLE_BAR_FRACTION = 0.02f
 private const val DONUT_GAP_DEGREES = 1.5f
+private const val DONUT_STROKE_FRACTION = 0.14f
+private const val SELECTED_STROKE_SCALE = 1.3f
+private const val DIMMED_ALPHA = 0.35f
+private const val TOUCH_SLACK = 2f
 
 /**
  * Expense bars drawn on a Canvas. [selectedIndex] is highlighted; tapping picks the bar under
@@ -129,49 +138,94 @@ internal fun barLabel(
     return if (chart.granularity == BarGranularity.DAY) dayMonth(date) else monthYear(date)
 }
 
-/** One ring segment per category in the given order, sized by [shares] (0..1, summing to 1). */
+/**
+ * One ring segment per category in the given order, sized by [shares] (0..1, summing to 1).
+ * Tapping a segment reports its index (null for the hole or outside); [selectedIndex] is drawn
+ * thicker and the others are dimmed.
+ */
 @Composable
 internal fun SpendingDonut(
     shares: List<Pair<Float, Color>>,
     description: String,
+    selectedIndex: Int?,
+    onSelect: (Int?) -> Unit,
     modifier: Modifier = Modifier,
     size: Dp = 180.dp,
     center: @Composable () -> Unit,
 ) {
     val emptyColor = MaterialTheme.colorScheme.surfaceVariant
     Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
-        Canvas(modifier = Modifier.size(size).semantics { contentDescription = description }) {
-            val stroke = this.size.minDimension * 0.14f
-            val inset = stroke / 2
-            val arcSize = Size(this.size.width - stroke, this.size.height - stroke)
+        Canvas(
+            modifier =
+                Modifier
+                    .size(size)
+                    .semantics { contentDescription = description }
+                    .pointerInput(shares) {
+                        detectTapGestures { offset -> onSelect(donutSegmentAt(offset, this.size.toSize(), shares)) }
+                    },
+        ) {
+            val stroke = this.size.minDimension * DONUT_STROKE_FRACTION
             if (shares.isEmpty()) {
-                drawArc(
-                    emptyColor,
-                    0f,
-                    360f,
-                    useCenter = false,
-                    topLeft = Offset(inset, inset),
-                    size = arcSize,
-                    style = Stroke(stroke),
-                )
+                drawRing(emptyColor, 0f, 360f, stroke)
                 return@Canvas
             }
             val gap = if (shares.size > 1) DONUT_GAP_DEGREES else 0f
             var start = -90f
-            shares.forEach { (share, color) ->
+            shares.forEachIndexed { index, (share, color) ->
                 val sweep = 360f * share
-                drawArc(
-                    color = color,
+                val selected = index == selectedIndex
+                drawRing(
+                    color = if (selectedIndex == null || selected) color else color.copy(alpha = DIMMED_ALPHA),
                     startAngle = start + gap / 2,
                     sweepAngle = (sweep - gap).coerceAtLeast(0.5f),
-                    useCenter = false,
-                    topLeft = Offset(inset, inset),
-                    size = arcSize,
-                    style = Stroke(stroke),
+                    stroke = if (selected) stroke * SELECTED_STROKE_SCALE else stroke,
+                    ringStroke = stroke * SELECTED_STROKE_SCALE,
                 )
                 start += sweep
             }
         }
         center()
     }
+}
+
+/** Arc centred on the ring; [ringStroke] is the widest stroke, so a thicker one never clips. */
+private fun DrawScope.drawRing(
+    color: Color,
+    startAngle: Float,
+    sweepAngle: Float,
+    stroke: Float,
+    ringStroke: Float = stroke,
+) {
+    val inset = ringStroke / 2
+    drawArc(
+        color = color,
+        startAngle = startAngle,
+        sweepAngle = sweepAngle,
+        useCenter = false,
+        topLeft = Offset(inset, inset),
+        size = Size(size.width - ringStroke, size.height - ringStroke),
+        style = Stroke(stroke),
+    )
+}
+
+/** Index of the segment under [offset], counted clockwise from 12 o'clock; null in the hole or outside. */
+internal fun donutSegmentAt(
+    offset: Offset,
+    size: Size,
+    shares: List<Pair<Float, Color>>,
+): Int? {
+    val radius = size.minDimension / 2
+    val dx = offset.x - size.width / 2
+    val dy = offset.y - size.height / 2
+    val distance = sqrt(dx * dx + dy * dy)
+    val ringWidth = size.minDimension * DONUT_STROKE_FRACTION * SELECTED_STROKE_SCALE
+    // A little slack inside the ring: segments are thin and fingers are not.
+    if (distance > radius || distance < radius - ringWidth * TOUCH_SLACK) return null
+    val angle = (atan2(dy, dx) * 180f / PI.toFloat() + 90f + 360f) % 360f
+    var end = 0f
+    shares.forEachIndexed { index, (share, _) ->
+        end += share * 360f
+        if (angle < end) return index
+    }
+    return shares.lastIndex.takeIf { it >= 0 }
 }

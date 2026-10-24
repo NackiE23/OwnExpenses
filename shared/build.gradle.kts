@@ -60,6 +60,9 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
         }
+        jvmTest.dependencies {
+            implementation(libs.androidx.room.testing)
+        }
     }
 }
 

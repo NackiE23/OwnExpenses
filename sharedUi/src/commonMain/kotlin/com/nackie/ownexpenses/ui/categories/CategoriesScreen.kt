@@ -103,6 +103,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 internal fun CategoriesScreen(
     initialType: TransactionType,
     startWithCreate: Boolean,
+    startWithEditId: Long?,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CategoriesViewModel = koinViewModel(),
@@ -116,6 +117,7 @@ internal fun CategoriesScreen(
         initialApplied = true
         viewModel.selectType(initialType)
         if (startWithCreate) viewModel.startCreate()
+        startWithEditId?.let(viewModel::startEditById)
     }
     RemovalSnackbarEffect(
         events = viewModel.events,

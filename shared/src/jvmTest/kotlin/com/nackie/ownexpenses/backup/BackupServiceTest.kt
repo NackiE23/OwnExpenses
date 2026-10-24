@@ -155,6 +155,17 @@ class BackupServiceTest {
     }
 
     @Test
+    fun backupsFromTheFirstPaletteGetSaturatedColors() {
+        val service = BackupService(target, targetSettings, clock)
+        val dull = """{"id":1,"name":"Cafe","type":"expense","color":"#FFD81B60","icon":"cafe","sortOrder":0}"""
+        val custom = """{"id":2,"name":"Car","type":"expense","color":"#FF123456","icon":"other","sortOrder":1}"""
+
+        val backup = assertIs<BackupReadResult.Valid>(service.read(document(categories = "$dull,$custom"))).backup
+
+        assertEquals(listOf(0xFFF50057.toInt(), 0xFF123456.toInt()), backup.categories.map { it.color })
+    }
+
+    @Test
     fun rejectsInconsistentData() {
         val service = BackupService(target, targetSettings, clock)
         val category = """{"id":1,"name":"Cafe","type":"expense","color":"#FFD81B60","icon":"cafe","sortOrder":0}"""
@@ -196,7 +207,7 @@ class BackupServiceTest {
         val transport = source.insertCategory("Transport", TransactionType.EXPENSE)
         val taxi = source.insertCategory("Taxi", TransactionType.EXPENSE, parentId = transport)
         val cafe = source.insertCategory("Cafe", TransactionType.EXPENSE, sortOrder = 1)
-        categories.updateCategory(cafe, "Cafe", 0xFFD81B60.toInt(), "cafe")
+        categories.updateCategory(cafe, "Cafe", 0xFFF50057.toInt(), "cafe")
         transactions.addTransaction(TransactionInput(salary, 1000_00, LocalDate(2026, 10, 1)))
         transactions.addTransaction(TransactionInput(taxi, 150_00, LocalDate(2026, 10, 3), "Airport \"Boryspil\""))
         transactions.addTransaction(TransactionInput(cafe, 89_50, LocalDate(2026, 10, 3)))

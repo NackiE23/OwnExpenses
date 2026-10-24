@@ -53,14 +53,14 @@ data class MoneyColors(
 
 internal val LightMoneyColors =
     MoneyColors(
-        expense = Color(0xFFC62828),
-        income = Color(0xFF2E7D32),
-        negativeBalance = Color(0xFFC62828),
+        expense = Color(0xFFD50000),
+        income = Color(0xFF00873E),
+        negativeBalance = Color(0xFFD50000),
     )
 
 internal val DarkMoneyColors =
     MoneyColors(
-        expense = Color(0xFFEF6F6C),
-        income = Color(0xFF6CC38A),
-        negativeBalance = Color(0xFFEF6F6C),
+        expense = Color(0xFFFF5370),
+        income = Color(0xFF3DDC84),
+        negativeBalance = Color(0xFFFF5370),
     )

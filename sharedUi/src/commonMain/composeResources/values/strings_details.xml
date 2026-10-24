@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="details_open">Show details</string>
+    <plurals name="details_operations">
+        <item quantity="one">%1$d operation</item>
+        <item quantity="other">%1$d operations</item>
+    </plurals>
+    <string name="details_share">%1$s of the period</string>
+    <string name="details_edit">Edit</string>
+    <string name="details_operations_button">Operations</string>
+</resources>

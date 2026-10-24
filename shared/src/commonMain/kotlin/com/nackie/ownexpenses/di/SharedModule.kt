@@ -9,6 +9,7 @@ import com.nackie.ownexpenses.data.repository.DataStoreSettingsRepository
 import com.nackie.ownexpenses.data.repository.DefaultCategorySeeder
 import com.nackie.ownexpenses.data.repository.RoomCategoryRepository
 import com.nackie.ownexpenses.data.repository.RoomTransactionRepository
+import com.nackie.ownexpenses.domain.OperationsFilterSelection
 import com.nackie.ownexpenses.domain.PeriodSelection
 import com.nackie.ownexpenses.domain.SystemTodayProvider
 import com.nackie.ownexpenses.domain.TodayProvider
@@ -49,6 +50,7 @@ val sharedModule: Module =
 
         single<TodayProvider> { SystemTodayProvider(get()) }
         single { PeriodSelection(get()) }
+        single { OperationsFilterSelection() }
 
         single { BackupService(get(), get(), get()) }
         single { SumlioImportService(get()) }
