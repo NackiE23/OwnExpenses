@@ -8,6 +8,7 @@ import com.nackie.ownexpenses.data.local.AppDatabase
 import com.nackie.ownexpenses.data.repository.RoomCategoryRepository
 import com.nackie.ownexpenses.data.repository.RoomTransactionRepository
 import com.nackie.ownexpenses.domain.model.AmountKey
+import com.nackie.ownexpenses.domain.model.AmountOperator
 import com.nackie.ownexpenses.domain.model.TransactionInput
 import com.nackie.ownexpenses.domain.model.TransactionType
 import com.nackie.ownexpenses.presentation.FakeTodayProvider
@@ -69,7 +70,7 @@ internal class EditTransactionTest : MainDispatcherTest() {
             assertTrue(state.isEditing)
             assertEquals("Transport", state.category.name)
             assertEquals(taxi, state.selectedSubcategoryId)
-            assertEquals(12_50, state.amount.minorUnits)
+            assertEquals(12_50L, state.amount.result)
             assertEquals(LocalDate(2026, 10, 20), state.date)
             assertEquals("Airport", state.description)
             assertTrue(state.isDescriptionExpanded)
@@ -99,6 +100,25 @@ internal class EditTransactionTest : MainDispatcherTest() {
             assertEquals(12_00, saved.amountMinor)
             assertEquals(bus, saved.categoryId)
             assertEquals(LocalDate(2026, 10, 23), saved.date)
+        }
+
+    @Test
+    fun editedAmountCanBeExtendedWithAnExpression() =
+        runTest {
+            val id = transactions.addTransaction(TransactionInput(cafe, 89_00, today))
+
+            viewModel.events.test {
+                viewModel.openForEdit(id)
+                viewModel.uiState.filterNotNull().first()
+                // 89 + 35, e.g. a forgotten second coffee.
+                viewModel.onKey(AmountKey.Operator(AmountOperator.PLUS))
+                viewModel.onKey(AmountKey.Digit(3))
+                viewModel.onKey(AmountKey.Digit(5))
+                viewModel.submit()
+                assertEquals(QuickEntryEvent.Updated, awaitItem())
+            }
+
+            assertEquals(124_00, transactions.getTransaction(id)?.amountMinor)
         }
 
     @Test

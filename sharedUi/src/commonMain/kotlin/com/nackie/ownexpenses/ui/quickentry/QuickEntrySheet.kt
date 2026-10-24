@@ -51,6 +51,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nackie.ownexpenses.domain.model.AmountExpression
 import com.nackie.ownexpenses.domain.model.AmountKey
 import com.nackie.ownexpenses.domain.model.Category
 import com.nackie.ownexpenses.domain.model.CategoryWithSubcategories
@@ -74,6 +75,7 @@ import com.nackie.ownexpenses.ui.resources.ic_notes
 import com.nackie.ownexpenses.ui.resources.quick_entry_add
 import com.nackie.ownexpenses.ui.resources.quick_entry_add_description
 import com.nackie.ownexpenses.ui.resources.quick_entry_amount
+import com.nackie.ownexpenses.ui.resources.quick_entry_cannot_calculate
 import com.nackie.ownexpenses.ui.resources.quick_entry_change_category
 import com.nackie.ownexpenses.ui.resources.quick_entry_delete
 import com.nackie.ownexpenses.ui.resources.quick_entry_description
@@ -81,6 +83,7 @@ import com.nackie.ownexpenses.ui.resources.quick_entry_edit_title
 import com.nackie.ownexpenses.ui.resources.quick_entry_next_day
 import com.nackie.ownexpenses.ui.resources.quick_entry_pick_date
 import com.nackie.ownexpenses.ui.resources.quick_entry_previous_day
+import com.nackie.ownexpenses.ui.resources.quick_entry_result
 import com.nackie.ownexpenses.ui.resources.quick_entry_save
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.painterResource
@@ -183,24 +186,7 @@ private fun QuickEntrySheet(
                 onExpand = onExpandDescription,
                 onChange = onDescriptionChange,
             )
-            val amountLabel = stringResource(Res.string.quick_entry_amount)
-            Text(
-                text = formatter.formatInput(state.amount),
-                style = MaterialTheme.typography.displayMedium,
-                textAlign = TextAlign.Center,
-                color =
-                    if (state.amount.isEmpty) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                maxLines = 1,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .testTag(UiTestTags.AMOUNT)
-                        .semantics { contentDescription = amountLabel },
-            )
+            AmountDisplay(amount = state.amount, formatter = formatter)
             AmountKeypad(
                 decimalSeparator = formatter.decimalSeparatorLabel,
                 submitLabel =
@@ -264,6 +250,60 @@ private fun DateSelector(
         }
     }
 }
+
+/**
+ * The amount as typed. With operators, the expression goes on a smaller line and the result
+ * that will be saved below it, in red when it cannot be saved (not positive, or not computable).
+ * The fixed minimum height keeps the keypad from jumping when the first operator appears.
+ */
+@Composable
+private fun AmountDisplay(
+    amount: AmountExpression,
+    formatter: MoneyFormatter,
+    modifier: Modifier = Modifier,
+) {
+    val label = stringResource(Res.string.quick_entry_amount)
+    val colors = MaterialTheme.colorScheme
+    Column(
+        modifier = modifier.fillMaxWidth().heightIn(min = AmountDisplayMinHeight),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        val resultModifier = Modifier.testTag(UiTestTags.AMOUNT).semantics { contentDescription = label }
+        if (!amount.hasOperators) {
+            Text(
+                text = formatter.formatExpression(amount),
+                style = MaterialTheme.typography.displayMedium,
+                color = if (amount.isEmpty) colors.onSurfaceVariant else colors.onSurface,
+                maxLines = 1,
+                modifier = resultModifier,
+            )
+            return@Column
+        }
+        Text(
+            text = formatter.formatExpression(amount),
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+        )
+        val result = amount.result
+        Text(
+            text =
+                if (result == null) {
+                    stringResource(Res.string.quick_entry_cannot_calculate)
+                } else {
+                    stringResource(Res.string.quick_entry_result, formatter.format(result))
+                },
+            style = MaterialTheme.typography.displaySmall,
+            color = if (result == null || result <= 0) colors.error else colors.onSurface,
+            maxLines = 1,
+            modifier = resultModifier,
+        )
+    }
+}
+
+private val AmountDisplayMinHeight = 96.dp
 
 /** Title row shown while editing: what the panel does, and the delete action. */
 @Composable

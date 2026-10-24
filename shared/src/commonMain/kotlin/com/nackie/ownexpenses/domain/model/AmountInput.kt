@@ -13,6 +13,18 @@ sealed interface AmountKey {
     data object DecimalSeparator : AmountKey
 
     data object Backspace : AmountKey
+
+    data class Operator(
+        val operator: AmountOperator,
+    ) : AmountKey
+}
+
+/** Calculator operators of the keypad; see [AmountExpression]. */
+enum class AmountOperator {
+    PLUS,
+    MINUS,
+    TIMES,
+    DIVIDE,
 }
 
 /**
@@ -52,6 +64,11 @@ data class AmountInput(
                     fraction.isEmpty() -> copy(fraction = null)
                     else -> copy(fraction = fraction.dropLast(1))
                 }
+            }
+
+            // A single number has no operators; AmountExpression combines several.
+            is AmountKey.Operator -> {
+                this
             }
         }
 

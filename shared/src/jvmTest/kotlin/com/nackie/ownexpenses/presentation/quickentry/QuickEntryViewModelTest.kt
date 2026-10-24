@@ -8,6 +8,7 @@ import com.nackie.ownexpenses.data.local.AppDatabase
 import com.nackie.ownexpenses.data.repository.RoomCategoryRepository
 import com.nackie.ownexpenses.data.repository.RoomTransactionRepository
 import com.nackie.ownexpenses.domain.model.AmountKey
+import com.nackie.ownexpenses.domain.model.AmountOperator
 import com.nackie.ownexpenses.domain.model.CategoryWithSubcategories
 import com.nackie.ownexpenses.domain.model.TransactionType
 import com.nackie.ownexpenses.presentation.FakeTodayProvider
@@ -161,6 +162,41 @@ internal class QuickEntryViewModelTest : MainDispatcherTest() {
             assertEquals("Transport", state.category.name)
             assertEquals(listOf("Taxi", "Bus"), state.subcategories.map { it.name })
         }
+
+    @Test
+    fun expressionResultIsSaved() =
+        runTest {
+            viewModel.events.test {
+                viewModel.open(transport)
+                press(1, 2, 0)
+                viewModel.onKey(AmountKey.Operator(AmountOperator.PLUS))
+                press(3, 5)
+                viewModel.onKey(AmountKey.Operator(AmountOperator.TIMES))
+                press(2)
+                viewModel.submit()
+
+                val added = assertIs<QuickEntryEvent.Added>(awaitItem())
+                assertEquals(190_00, transactions.getTransaction(added.transactionId)?.amountMinor)
+            }
+        }
+
+    @Test
+    fun nonPositiveOrUncomputableResultCannotBeSaved() {
+        viewModel.open(transport)
+        press(5, 0)
+        viewModel.onKey(AmountKey.Operator(AmountOperator.MINUS))
+        press(8, 0)
+        assertFalse(assertNotNull(viewModel.uiState.value).canSubmit, "50 - 80 is negative")
+
+        viewModel.close()
+        viewModel.open(transport)
+        press(5)
+        viewModel.onKey(AmountKey.Operator(AmountOperator.DIVIDE))
+        press(0)
+        assertFalse(assertNotNull(viewModel.uiState.value).canSubmit, "division by zero")
+        viewModel.submit()
+        assertNotNull(viewModel.uiState.value, "Panel stays open")
+    }
 
     @Test
     fun closeDiscardsInput() {

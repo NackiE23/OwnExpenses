@@ -1,5 +1,6 @@
 package com.nackie.ownexpenses.presentation.format
 
+import com.nackie.ownexpenses.domain.model.AmountExpression
 import com.nackie.ownexpenses.domain.model.AmountInput
 import com.nackie.ownexpenses.domain.model.AmountKey
 import kotlin.test.Test
@@ -51,6 +52,18 @@ class MoneyFormatterTest {
         assertEquals("1 234,0 ₴", uk.formatInput(input).replace('\u00A0', ' '))
         assertEquals("0 ₴", uk.formatInput(AmountInput()).replace('\u00A0', ' '))
         assertEquals("0, ₴", uk.formatInput(AmountInput().press(AmountKey.DecimalSeparator)).replace('\u00A0', ' '))
+    }
+
+    @Test
+    fun expressionShowsOperatorsWithoutCurrency() {
+        fun typed(text: String) = text.fold(AmountExpression()) { expression, char -> expression.type(char) }
+
+        fun AmountExpression.shown() = uk.formatExpression(this).replace('\u00A0', ' ')
+
+        assertEquals("1 200 + 35 \u00D7 2", typed("1200+35*2").shown())
+        assertEquals("120 \u2212", typed("120-").shown())
+        assertEquals("12,5 \u00F7 0,", typed("12,5/0,").shown())
+        assertEquals("120 ₴", typed("120").shown())
     }
 
     @Test

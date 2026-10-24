@@ -17,6 +17,13 @@
     <string name="quick_entry_add_description">Add description</string>
     <string name="quick_entry_description">Description</string>
     <string name="quick_entry_amount">Amount</string>
+    <string name="quick_entry_plus">Plus</string>
+    <string name="quick_entry_minus">Minus</string>
+    <string name="quick_entry_times">Multiply</string>
+    <string name="quick_entry_divide">Divide</string>
+    <!-- Result line under a calculation; %1$s is the amount. -->
+    <string name="quick_entry_result">= %1$s</string>
+    <string name="quick_entry_cannot_calculate">Cannot be calculated</string>
     <string name="dialog_ok">OK</string>
     <string name="dialog_cancel">Cancel</string>
 

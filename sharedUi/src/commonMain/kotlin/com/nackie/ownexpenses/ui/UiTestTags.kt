@@ -17,5 +17,8 @@ object UiTestTags {
 
     fun digitKey(digit: Int): String = "key_$digit"
 
+    /** [operator] is the AmountOperator name, e.g. "PLUS". */
+    fun operatorKey(operator: String): String = "key_${operator.lowercase()}"
+
     const val DECIMAL_SEPARATOR_KEY = "key_separator"
 }

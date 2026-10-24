@@ -3,7 +3,7 @@ package com.nackie.ownexpenses.presentation.quickentry
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nackie.ownexpenses.domain.TodayProvider
-import com.nackie.ownexpenses.domain.model.AmountInput
+import com.nackie.ownexpenses.domain.model.AmountExpression
 import com.nackie.ownexpenses.domain.model.AmountKey
 import com.nackie.ownexpenses.domain.model.Category
 import com.nackie.ownexpenses.domain.model.CategoryWithSubcategories
@@ -33,7 +33,8 @@ data class QuickEntryUiState(
     val category: Category,
     val subcategories: List<Category>,
     val selectedSubcategoryId: Long? = null,
-    val amount: AmountInput = AmountInput(),
+    /** What the keypad built; the record gets its result. */
+    val amount: AmountExpression = AmountExpression(),
     val date: LocalDate,
     val today: LocalDate,
     val description: String = "",
@@ -46,7 +47,8 @@ data class QuickEntryUiState(
 ) {
     val isEditing: Boolean get() = editing != null
 
-    val canSubmit: Boolean get() = amount.minorUnits > 0 && !isSaving
+    /** Only a computable, positive result can be saved; division by zero or "50 − 80" cannot. */
+    val canSubmit: Boolean get() = (amount.result ?: 0) > 0 && !isSaving
 }
 
 sealed interface QuickEntryEvent {
@@ -136,7 +138,7 @@ class QuickEntryViewModel(
                         category = node.category,
                         subcategories = node.subcategories.activeOr(selectedSubcategoryId),
                         selectedSubcategoryId = selectedSubcategoryId,
-                        amount = AmountInput.fromMinorUnits(transaction.amountMinor),
+                        amount = AmountExpression.of(transaction.amountMinor),
                         date = transaction.date,
                         today = todayProvider.today(),
                         description = transaction.description.orEmpty(),
@@ -185,7 +187,7 @@ class QuickEntryViewModel(
             val input =
                 TransactionInput(
                     categoryId = current.selectedSubcategoryId ?: current.category.id,
-                    amountMinor = current.amount.minorUnits,
+                    amountMinor = checkNotNull(current.amount.result),
                     date = current.date,
                     description = current.description,
                 )
