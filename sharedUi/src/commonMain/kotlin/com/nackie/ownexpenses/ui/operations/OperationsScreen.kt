@@ -3,7 +3,6 @@ package com.nackie.ownexpenses.ui.operations
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,9 +18,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxState
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -52,24 +48,22 @@ import com.nackie.ownexpenses.ui.format.monthYear
 import com.nackie.ownexpenses.ui.format.rememberMoneyFormatter
 import com.nackie.ownexpenses.ui.format.weekdayName
 import com.nackie.ownexpenses.ui.period.PeriodSwitcher
+import com.nackie.ownexpenses.ui.period.periodSwipe
 import com.nackie.ownexpenses.ui.quickentry.QuickEntryHost
 import com.nackie.ownexpenses.ui.quickentry.UndoSnackbarHost
 import com.nackie.ownexpenses.ui.resources.Res
 import com.nackie.ownexpenses.ui.resources.category_with_subcategory
 import com.nackie.ownexpenses.ui.resources.filter_no_matches
-import com.nackie.ownexpenses.ui.resources.history_delete
 import com.nackie.ownexpenses.ui.resources.history_empty
-import com.nackie.ownexpenses.ui.resources.ic_delete
 import com.nackie.ownexpenses.ui.resources.type_expenses
 import com.nackie.ownexpenses.ui.resources.type_incomes
 import com.nackie.ownexpenses.ui.theme.OwnExpensesTheme
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Operations tab: records of the selected period grouped by day with day totals. Tap edits a
- * record, swipe left deletes it; both deletions are undone from the snackbar.
+ * record (deleting is done there, with undo); a horizontal swipe steps the period like the arrows.
  */
 @Composable
 internal fun OperationsScreen(
@@ -95,7 +89,6 @@ internal fun OperationsScreen(
             onNextPeriod = historyViewModel::showNextPeriod,
             onSelectPeriod = historyViewModel::selectPeriod,
             onEdit = quickEntryViewModel::openForEdit,
-            onDelete = quickEntryViewModel::deleteTransaction,
             filterActions =
                 FilterBarActions(
                     query = filter.query,
@@ -130,12 +123,18 @@ private fun OperationsContent(
     onNextPeriod: () -> Unit,
     onSelectPeriod: (Period) -> Unit,
     onEdit: (Long) -> Unit,
-    onDelete: (Long) -> Unit,
     filterActions: FilterBarActions,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .periodSwipe(
+                    enabled = state.period != Period.AllTime,
+                    onPrevious = onPreviousPeriod,
+                    onNext = onNextPeriod,
+                ),
         contentPadding = PaddingValues(bottom = 16.dp),
     ) {
         item(key = "header") {
@@ -184,9 +183,12 @@ private fun OperationsContent(
                 DayHeader(day = day, formatter = formatter, modifier = Modifier.animateItem())
             }
             items(day.items, key = { it.transaction.id }, contentType = { "operation" }) { item ->
-                SwipeToDeleteRow(onDelete = { onDelete(item.transaction.id) }, modifier = Modifier.animateItem()) {
-                    OperationRow(item = item, formatter = formatter, onClick = { onEdit(item.transaction.id) })
-                }
+                OperationRow(
+                    item = item,
+                    formatter = formatter,
+                    onClick = { onEdit(item.transaction.id) },
+                    modifier = Modifier.animateItem(),
+                )
             }
         }
     }
@@ -305,42 +307,6 @@ private fun OperationRow(
             style = MaterialTheme.typography.titleMedium,
             color = amountColor(item.transaction.signedAmountMinor),
         )
-    }
-}
-
-/** Swipe from right to left deletes at once; the snackbar offers undo instead of a dialog. */
-@Composable
-private fun SwipeToDeleteRow(
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    // Plain remember on purpose: rememberSwipeToDismissBoxState() is saveable per list key, so a
-    // record restored by undo would come back already "dismissed" and be deleted again.
-    val state = remember { SwipeToDismissBoxState(SwipeToDismissBoxValue.Settled, positionalThreshold = { it / 2 }) }
-    SwipeToDismissBox(
-        state = state,
-        modifier = modifier,
-        enableDismissFromStartToEnd = false,
-        onDismiss = { value -> if (value == SwipeToDismissBoxValue.EndToStart) onDelete() },
-        backgroundContent = {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.errorContainer)
-                        .padding(horizontal = 24.dp),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                Icon(
-                    painter = painterResource(Res.drawable.ic_delete),
-                    contentDescription = stringResource(Res.string.history_delete),
-                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                )
-            }
-        },
-    ) {
-        content()
     }
 }
 

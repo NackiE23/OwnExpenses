@@ -181,17 +181,4 @@ internal class EditTransactionTest : MainDispatcherTest() {
             }
             assertEquals(original, transactions.getTransaction(id))
         }
-
-    @Test
-    fun swipeDeleteEmitsDeletedEvent() =
-        runTest {
-            val id = transactions.addTransaction(TransactionInput(salary, 1000_00, today))
-
-            viewModel.events.test {
-                viewModel.deleteTransaction(id)
-
-                val deleted = assertIs<QuickEntryEvent.Deleted>(awaitItem())
-                assertEquals(id, deleted.transaction.id)
-            }
-        }
 }

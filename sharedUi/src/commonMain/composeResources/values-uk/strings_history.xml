@@ -1,6 +1,5 @@
 <resources>
     <string name="history_empty">Немає операцій за цей період</string>
-    <string name="history_delete">Видалити</string>
     <string name="category_with_subcategory">%1$s (%2$s)</string>
     <string name="snackbar_deleted">Операцію видалено</string>
 

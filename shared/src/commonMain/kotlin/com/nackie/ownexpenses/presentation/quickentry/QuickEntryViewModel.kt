@@ -220,8 +220,7 @@ class QuickEntryViewModel(
         deleteTransaction(editing.id)
     }
 
-    /** Deletes a record without opening the panel (swipe in history). */
-    fun deleteTransaction(transactionId: Long) {
+    private fun deleteTransaction(transactionId: Long) {
         viewModelScope.launch {
             val deleted = persist { transactionRepository.deleteTransaction(transactionId) } ?: return@launch
             eventChannel.send(QuickEntryEvent.Deleted(deleted))

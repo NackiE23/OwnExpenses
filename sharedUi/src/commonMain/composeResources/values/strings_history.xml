@@ -1,7 +1,6 @@
 <resources>
     <!-- History -->
     <string name="history_empty">No operations in this period</string>
-    <string name="history_delete">Delete</string>
     <!-- %1$s category, %2$s subcategory -->
     <string name="category_with_subcategory">%1$s (%2$s)</string>
     <string name="snackbar_deleted">Operation deleted</string>
