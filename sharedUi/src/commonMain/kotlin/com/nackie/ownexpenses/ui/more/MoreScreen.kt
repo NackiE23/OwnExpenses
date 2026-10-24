@@ -40,6 +40,9 @@ import com.nackie.ownexpenses.backup.BackupService
 import com.nackie.ownexpenses.domain.model.CsvDelimiter
 import com.nackie.ownexpenses.domain.model.Period
 import com.nackie.ownexpenses.domain.model.ThemeMode
+import com.nackie.ownexpenses.importing.SumlioCategoryNames
+import com.nackie.ownexpenses.importing.SumlioImportError
+import com.nackie.ownexpenses.importing.SumlioImportSummary
 import com.nackie.ownexpenses.presentation.settings.ExportTarget
 import com.nackie.ownexpenses.presentation.settings.FileKind
 import com.nackie.ownexpenses.presentation.settings.RestoreSummary
@@ -48,6 +51,7 @@ import com.nackie.ownexpenses.presentation.settings.SettingsUiState
 import com.nackie.ownexpenses.presentation.settings.SettingsViewModel
 import com.nackie.ownexpenses.ui.format.dayMonthYear
 import com.nackie.ownexpenses.ui.format.periodLabel
+import com.nackie.ownexpenses.ui.format.rememberMoneyFormatter
 import com.nackie.ownexpenses.ui.period.DateRangePickerDialog
 import com.nackie.ownexpenses.ui.period.RadioRow
 import com.nackie.ownexpenses.ui.resources.Res
@@ -57,6 +61,7 @@ import com.nackie.ownexpenses.ui.resources.backup_restore
 import com.nackie.ownexpenses.ui.resources.backup_restore_hint
 import com.nackie.ownexpenses.ui.resources.backup_saved
 import com.nackie.ownexpenses.ui.resources.backup_section
+import com.nackie.ownexpenses.ui.resources.category_other_expense
 import com.nackie.ownexpenses.ui.resources.csv_delimiter_comma
 import com.nackie.ownexpenses.ui.resources.csv_delimiter_semicolon
 import com.nackie.ownexpenses.ui.resources.dialog_cancel
@@ -69,6 +74,22 @@ import com.nackie.ownexpenses.ui.resources.export_period_selected
 import com.nackie.ownexpenses.ui.resources.export_save
 import com.nackie.ownexpenses.ui.resources.export_saved
 import com.nackie.ownexpenses.ui.resources.export_share
+import com.nackie.ownexpenses.ui.resources.import_confirm
+import com.nackie.ownexpenses.ui.resources.import_confirm_backup
+import com.nackie.ownexpenses.ui.resources.import_confirm_duplicates
+import com.nackie.ownexpenses.ui.resources.import_confirm_reversed
+import com.nackie.ownexpenses.ui.resources.import_confirm_skipped
+import com.nackie.ownexpenses.ui.resources.import_confirm_text
+import com.nackie.ownexpenses.ui.resources.import_confirm_title
+import com.nackie.ownexpenses.ui.resources.import_error_not_sumlio
+import com.nackie.ownexpenses.ui.resources.import_error_nothing
+import com.nackie.ownexpenses.ui.resources.import_error_row
+import com.nackie.ownexpenses.ui.resources.import_error_write
+import com.nackie.ownexpenses.ui.resources.import_section
+import com.nackie.ownexpenses.ui.resources.import_sumlio
+import com.nackie.ownexpenses.ui.resources.import_sumlio_hint
+import com.nackie.ownexpenses.ui.resources.import_sumlio_refunds
+import com.nackie.ownexpenses.ui.resources.imported
 import com.nackie.ownexpenses.ui.resources.open_failed
 import com.nackie.ownexpenses.ui.resources.period_kind_custom
 import com.nackie.ownexpenses.ui.resources.restore_confirm
@@ -102,7 +123,7 @@ import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
-/** "More" tab: theme, CSV delimiter, currency (fixed), language note, CSV export and backups. */
+/** "More" tab: theme, CSV delimiter, currency (fixed), language note, CSV export, backups and Sumlio import. */
 @Composable
 internal fun MoreScreen(
     onManageCategories: () -> Unit,
@@ -115,8 +136,13 @@ internal fun MoreScreen(
     // What the next "saved" message is about; the platform picker only reports success.
     var lastFile by remember { mutableStateOf<Pair<FileKind, Int>?>(null) }
     var dialog by rememberSaveable { mutableStateOf(MoreDialog.NONE) }
-    // Whether the pending picker result belongs to "restore" (reading) rather than saving.
-    var opening by remember { mutableStateOf(false) }
+    // Which file the pending picker result is (backup or Sumlio CSV); null while saving.
+    var opening by remember { mutableStateOf<OpenPurpose?>(null) }
+    val sumlioNames =
+        SumlioCategoryNames(
+            refunds = stringResource(Res.string.import_sumlio_refunds),
+            other = stringResource(Res.string.category_other_expense),
+        )
 
     fun showMessage(
         resource: StringResource,
@@ -127,8 +153,8 @@ internal fun MoreScreen(
 
     val files =
         rememberDocumentFiles { result ->
-            val wasOpening = opening
-            opening = false
+            val purpose = opening
+            opening = null
             when (result) {
                 DocumentResult.Saved -> {
                     lastFile?.let { (kind, count) ->
@@ -146,11 +172,21 @@ internal fun MoreScreen(
                 }
 
                 DocumentResult.Failed -> {
-                    showMessage(if (wasOpening) Res.string.open_failed else Res.string.export_failed)
+                    showMessage(if (purpose != null) Res.string.open_failed else Res.string.export_failed)
                 }
 
                 is DocumentResult.Opened -> {
-                    viewModel.openBackup(result.content)
+                    when (purpose) {
+                        OpenPurpose.BACKUP -> {
+                            viewModel.openBackup(result.content)
+                        }
+
+                        OpenPurpose.SUMLIO -> {
+                            viewModel.openSumlioFile(result.content, sumlioNames)
+                        }
+
+                        null -> {}
+                    }
                 }
 
                 DocumentResult.Cancelled -> {}
@@ -176,6 +212,18 @@ internal fun MoreScreen(
                 is SettingsEvent.Restored -> {
                     showMessage(Res.string.restored, event.transactionCount.toString())
                 }
+
+                is SettingsEvent.ImportFailed -> {
+                    if (event.line != null) {
+                        showMessage(Res.string.import_error_row, event.line.toString())
+                    } else {
+                        showMessage(event.error.message)
+                    }
+                }
+
+                is SettingsEvent.Imported -> {
+                    showMessage(Res.string.imported, event.transactionCount.toString())
+                }
             }
         }
     }
@@ -193,8 +241,12 @@ internal fun MoreScreen(
             onExportClick = { dialog = MoreDialog.EXPORT },
             onBackupClick = { dialog = MoreDialog.BACKUP },
             onRestoreClick = {
-                opening = true
+                opening = OpenPurpose.BACKUP
                 files.open(BACKUP_MIME_TYPES)
+            },
+            onImportSumlioClick = {
+                opening = OpenPurpose.SUMLIO
+                files.open(CSV_MIME_TYPES)
             },
             modifier = Modifier.padding(innerPadding),
         )
@@ -233,6 +285,15 @@ internal fun MoreScreen(
             onDismiss = viewModel::cancelRestore,
         )
     }
+
+    state.pendingImport?.let { summary ->
+        ImportConfirmDialog(
+            summary = summary,
+            names = sumlioNames,
+            onConfirm = viewModel::confirmImport,
+            onDismiss = viewModel::cancelImport,
+        )
+    }
 }
 
 private enum class MoreDialog {
@@ -241,8 +302,17 @@ private enum class MoreDialog {
     BACKUP,
 }
 
+private enum class OpenPurpose {
+    BACKUP,
+    SUMLIO,
+}
+
 /** Files saved by other apps or downloaded may not be labelled as JSON; content is validated anyway. */
 private val BACKUP_MIME_TYPES = listOf(BackupService.MIME_TYPE, "application/octet-stream", "text/plain")
+
+/** CSV is labelled differently by browsers, file managers and cloud apps. */
+private val CSV_MIME_TYPES =
+    listOf("text/csv", "text/comma-separated-values", "application/csv", "text/plain", "application/octet-stream")
 
 @Composable
 private fun SettingsContent(
@@ -253,6 +323,7 @@ private fun SettingsContent(
     onExportClick: () -> Unit,
     onBackupClick: () -> Unit,
     onRestoreClick: () -> Unit,
+    onImportSumlioClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
@@ -309,6 +380,15 @@ private fun SettingsContent(
             Res.string.backup_restore_hint,
             enabled = !state.isBusy,
             onClick = onRestoreClick,
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        SectionTitle(stringResource(Res.string.import_section))
+        ActionItem(
+            Res.string.import_sumlio,
+            Res.string.import_sumlio_hint,
+            enabled = !state.isBusy,
+            onClick = onImportSumlioClick,
         )
     }
 }
@@ -451,7 +531,7 @@ private fun TargetDialog(
     )
 }
 
-/** Restoring cannot be undone, so unlike everything else it asks first. */
+/** Restoring cannot be undone, so it asks first. */
 @Composable
 private fun RestoreConfirmDialog(
     summary: RestoreSummary,
@@ -484,6 +564,70 @@ private fun RestoreConfirmDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.dialog_cancel)) } },
     )
 }
+
+/** What the Sumlio import adds; nothing is written until the user confirms. */
+@Composable
+private fun ImportConfirmDialog(
+    summary: SumlioImportSummary,
+    names: SumlioCategoryNames,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val formatter = rememberMoneyFormatter()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.import_confirm_title)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    stringResource(
+                        Res.string.import_confirm_text,
+                        summary.recordCount.toString(),
+                        dayMonthYear(summary.firstDate),
+                        dayMonthYear(summary.lastDate),
+                        summary.newCategoryCount.toString(),
+                        formatter.formatSigned(summary.balanceChangeMinor),
+                    ),
+                )
+                if (summary.reversedCount > 0) {
+                    Text(
+                        stringResource(
+                            Res.string.import_confirm_reversed,
+                            summary.reversedCount.toString(),
+                            names.refunds,
+                            names.other,
+                        ),
+                    )
+                }
+                if (summary.skippedCount > 0) {
+                    Text(stringResource(Res.string.import_confirm_skipped, summary.skippedCount.toString()))
+                }
+                if (summary.duplicateCount > 0) {
+                    Text(stringResource(Res.string.import_confirm_duplicates, summary.duplicateCount.toString()))
+                }
+                Text(
+                    text = stringResource(Res.string.import_confirm_backup),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(Res.string.import_confirm)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.dialog_cancel)) } },
+    )
+}
+
+private val SumlioImportError.message: StringResource
+    get() =
+        when (this) {
+            SumlioImportError.NOT_SUMLIO -> Res.string.import_error_not_sumlio
+            SumlioImportError.INVALID_ROW -> Res.string.import_error_not_sumlio
+            SumlioImportError.NOTHING_TO_IMPORT -> Res.string.import_error_nothing
+            SumlioImportError.IMPORT_FAILED -> Res.string.import_error_write
+        }
 
 private val BackupError.message: StringResource
     get() =

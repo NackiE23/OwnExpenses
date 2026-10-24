@@ -15,6 +15,12 @@ import com.nackie.ownexpenses.domain.model.ThemeMode
 import com.nackie.ownexpenses.domain.repository.SettingsRepository
 import com.nackie.ownexpenses.domain.repository.TransactionRepository
 import com.nackie.ownexpenses.export.CsvExporter
+import com.nackie.ownexpenses.importing.SumlioCategoryNames
+import com.nackie.ownexpenses.importing.SumlioImport
+import com.nackie.ownexpenses.importing.SumlioImportError
+import com.nackie.ownexpenses.importing.SumlioImportService
+import com.nackie.ownexpenses.importing.SumlioImportSummary
+import com.nackie.ownexpenses.importing.SumlioReadResult
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +43,8 @@ data class SettingsUiState(
     val isBusy: Boolean = false,
     /** A valid backup waiting for the user to confirm that it replaces all data. */
     val pendingRestore: RestoreSummary? = null,
+    /** A checked Sumlio file waiting for the user to confirm the import. */
+    val pendingImport: SumlioImportSummary? = null,
 )
 
 data class RestoreSummary(
@@ -79,18 +87,29 @@ sealed interface SettingsEvent {
     data class Restored(
         val transactionCount: Int,
     ) : SettingsEvent
+
+    data class ImportFailed(
+        val error: SumlioImportError,
+        val line: Int? = null,
+    ) : SettingsEvent
+
+    data class Imported(
+        val transactionCount: Int,
+    ) : SettingsEvent
 }
 
-/** "More" tab: theme, CSV delimiter, (fixed) currency, CSV export, backup and restore. */
+/** "More" tab: theme, CSV delimiter, (fixed) currency, CSV export, backup and restore, Sumlio import. */
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val transactionRepository: TransactionRepository,
     private val backupService: BackupService,
+    private val sumlioImportService: SumlioImportService,
     periodSelection: PeriodSelection,
     private val todayProvider: TodayProvider,
 ) : ViewModel() {
     private val busy = MutableStateFlow(false)
     private val pendingRestore = MutableStateFlow<RestorableBackup?>(null)
+    private val pendingImport = MutableStateFlow<SumlioImport?>(null)
 
     val uiState: StateFlow<SettingsUiState> =
         combine(
@@ -98,13 +117,15 @@ class SettingsViewModel(
             periodSelection.period,
             busy,
             pendingRestore,
-        ) { settings, period, isBusy, pending ->
+            pendingImport,
+        ) { settings, period, isBusy, pending, sumlio ->
             SettingsUiState(
                 settings = settings,
                 selectedPeriod = period,
                 today = todayProvider.today(),
                 isBusy = isBusy,
                 pendingRestore = pending?.let { RestoreSummary(it.categoryCount, it.transactionCount, it.createdAt) },
+                pendingImport = sumlio?.summary,
             )
         }.stateIn(
             scope = viewModelScope,
@@ -171,7 +192,7 @@ class SettingsViewModel(
         }
     }
 
-    /** The only confirmed action in the app: restoring cannot be undone. */
+    /** Asks first, like the Sumlio import: restoring cannot be undone. */
     fun confirmRestore() {
         val backup = pendingRestore.value ?: return
         pendingRestore.value = null
@@ -188,6 +209,37 @@ class SettingsViewModel(
 
     fun cancelRestore() {
         pendingRestore.value = null
+    }
+
+    /** Checks a picked Sumlio CSV; a valid one waits in [SettingsUiState.pendingImport] for confirmation. */
+    fun openSumlioFile(
+        content: String,
+        names: SumlioCategoryNames,
+    ) = runBusy {
+        val currency = settingsRepository.settings.first().currencyCode
+        when (val result = sumlioImportService.read(content, currency, names)) {
+            is SumlioReadResult.Ready -> pendingImport.value = result.file
+            is SumlioReadResult.Failed -> eventChannel.send(SettingsEvent.ImportFailed(result.error, result.line))
+        }
+    }
+
+    /** Adds the records to the existing data; the summary dialog was the confirmation. */
+    fun confirmImport() {
+        val sumlio = pendingImport.value ?: return
+        pendingImport.value = null
+        runBusy {
+            val event =
+                if (sumlioImportService.import(sumlio)) {
+                    SettingsEvent.Imported(sumlio.summary.recordCount)
+                } else {
+                    SettingsEvent.ImportFailed(SumlioImportError.IMPORT_FAILED)
+                }
+            eventChannel.send(event)
+        }
+    }
+
+    fun cancelImport() {
+        pendingImport.value = null
     }
 
     private fun runBusy(block: suspend () -> Unit) {

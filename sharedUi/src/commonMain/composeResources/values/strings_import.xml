@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_section">Import</string>
+    <string name="import_sumlio">Import from Sumlio</string>
+    <string name="import_sumlio_hint">One-time move of operations from a Sumlio CSV export; added to the current data</string>
+    <!-- Income category for Sumlio expenses with a negative amount -->
+    <string name="import_sumlio_refunds">Refunds</string>
+    <string name="import_confirm_title">Import from Sumlio?</string>
+    <!-- %1$s records, %2$s first date, %3$s last date, %4$s new categories, %5$s signed balance change -->
+    <string name="import_confirm_text">Records to add: %1$s, from %2$s to %3$s. New categories: %4$s. The balance changes by %5$s.</string>
+    <!-- %1$s count, %2$s refunds category, %3$s other expense category -->
+    <string name="import_confirm_reversed">Records with a negative amount: %1$s. Expense refunds become incomes in “%2$s”, negative incomes become expenses in “%3$s”.</string>
+    <string name="import_confirm_skipped">Skipped transfers and other currencies: %1$s.</string>
+    <string name="import_confirm_duplicates">Already imported earlier and skipped: %1$s.</string>
+    <string name="import_confirm_backup">Current data stays as it is. Making a backup first is a good idea.</string>
+    <string name="import_confirm">Import</string>
+    <string name="imported">Imported records: %1$s</string>
+    <string name="import_error_not_sumlio">This file is not a Sumlio CSV export</string>
+    <string name="import_error_row">Could not read line %1$s of the file; nothing was imported</string>
+    <string name="import_error_nothing">No new records: this file is already imported</string>
+    <string name="import_error_write">Could not import; your data was not changed</string>
+</resources>

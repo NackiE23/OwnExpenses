@@ -15,6 +15,9 @@ import com.nackie.ownexpenses.domain.model.Period
 import com.nackie.ownexpenses.domain.model.ThemeMode
 import com.nackie.ownexpenses.domain.model.TransactionInput
 import com.nackie.ownexpenses.domain.model.TransactionType
+import com.nackie.ownexpenses.importing.SumlioCategoryNames
+import com.nackie.ownexpenses.importing.SumlioImportError
+import com.nackie.ownexpenses.importing.SumlioImportService
 import com.nackie.ownexpenses.presentation.AppViewModel
 import com.nackie.ownexpenses.presentation.FakeTodayProvider
 import com.nackie.ownexpenses.presentation.MainDispatcherTest
@@ -43,6 +46,7 @@ internal class SettingsViewModelTest : MainDispatcherTest() {
                 settings,
                 transactions,
                 BackupService(database, settings, MutableClock()),
+                SumlioImportService(database),
                 PeriodSelection(today),
                 today,
             )
@@ -133,6 +137,35 @@ internal class SettingsViewModelTest : MainDispatcherTest() {
                 assertEquals(SettingsEvent.RestoreFailed(BackupError.NOT_A_BACKUP), awaitItem())
             }
             assertEquals(null, viewModel.uiState.value.pendingRestore)
+            assertEquals(1, database.transactionDao().getAll().size)
+        }
+
+    @Test
+    fun sumlioImportWaitsForConfirmation() =
+        runTest {
+            val csv =
+                "Date (UTC),Type,From account / from category,From subcategory,To account / to category," +
+                    "To subcategory,Amount 1,Currency 1,Amount 2,Currency 2,Comment,Tags\n" +
+                    "2026-10-01T08:00:00.000Z,Expense,Card,\"\",Cafe,\"\",89.0,UAH,89.0,UAH,\"\",\"\"\n"
+            val names = SumlioCategoryNames(refunds = "Refunds", other = "Other")
+
+            viewModel.events.test {
+                viewModel.openSumlioFile(csv, names)
+                viewModel.uiState.test {
+                    var state = awaitItem()
+                    while (state.pendingImport == null) state = awaitItem()
+                    assertEquals(1, state.pendingImport.recordCount)
+                    assertEquals(-89_00, state.pendingImport.balanceChangeMinor)
+                    cancelAndIgnoreRemainingEvents()
+                }
+                assertTrue(database.transactionDao().getAll().isEmpty())
+
+                viewModel.confirmImport()
+                assertEquals(SettingsEvent.Imported(transactionCount = 1), awaitItem())
+
+                viewModel.openSumlioFile(csv, names)
+                assertEquals(SettingsEvent.ImportFailed(SumlioImportError.NOTHING_TO_IMPORT), awaitItem())
+            }
             assertEquals(1, database.transactionDao().getAll().size)
         }
 

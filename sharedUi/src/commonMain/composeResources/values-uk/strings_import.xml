@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_section">Імпорт</string>
+    <string name="import_sumlio">Імпорт із Sumlio</string>
+    <string name="import_sumlio_hint">Одноразове перенесення операцій із CSV-експорту Sumlio; додаються до поточних даних</string>
+    <string name="import_sumlio_refunds">Повернення</string>
+    <string name="import_confirm_title">Імпортувати з Sumlio?</string>
+    <string name="import_confirm_text">Буде додано записів: %1$s, з %2$s по %3$s. Нових категорій: %4$s. Баланс зміниться на %5$s.</string>
+    <string name="import_confirm_reversed">Записів із від’ємною сумою: %1$s. Повернення витрат стануть надходженнями в «%2$s», від’ємні надходження стануть витратами в «%3$s».</string>
+    <string name="import_confirm_skipped">Пропущено переказів та операцій в іншій валюті: %1$s.</string>
+    <string name="import_confirm_duplicates">Уже імпортовано раніше й буде пропущено: %1$s.</string>
+    <string name="import_confirm_backup">Поточні дані не змінюються. Перед імпортом варто зробити резервну копію.</string>
+    <string name="import_confirm">Імпортувати</string>
+    <string name="imported">Імпортовано записів: %1$s</string>
+    <string name="import_error_not_sumlio">Цей файл не є CSV-експортом Sumlio</string>
+    <string name="import_error_row">Не вдалося прочитати рядок %1$s файлу; нічого не імпортовано</string>
+    <string name="import_error_nothing">Нових записів немає: цей файл уже імпортовано</string>
+    <string name="import_error_write">Не вдалося імпортувати, дані не змінено</string>
+</resources>

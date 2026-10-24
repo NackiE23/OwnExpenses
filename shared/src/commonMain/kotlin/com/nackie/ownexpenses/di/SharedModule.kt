@@ -15,6 +15,7 @@ import com.nackie.ownexpenses.domain.TodayProvider
 import com.nackie.ownexpenses.domain.repository.CategoryRepository
 import com.nackie.ownexpenses.domain.repository.SettingsRepository
 import com.nackie.ownexpenses.domain.repository.TransactionRepository
+import com.nackie.ownexpenses.importing.SumlioImportService
 import com.nackie.ownexpenses.presentation.AppViewModel
 import com.nackie.ownexpenses.presentation.categories.CategoriesViewModel
 import com.nackie.ownexpenses.presentation.history.HistoryViewModel
@@ -50,6 +51,7 @@ val sharedModule: Module =
         single { PeriodSelection(get()) }
 
         single { BackupService(get(), get(), get()) }
+        single { SumlioImportService(get()) }
         single { WidgetSnapshotSource(get(), get(), get()) }
 
         single { DefaultCategorySeeder(get(), get(), get()) }
