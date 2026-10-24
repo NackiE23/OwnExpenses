@@ -8,13 +8,19 @@ import com.nackie.ownexpenses.data.repository.DataStoreSettingsRepository
 import com.nackie.ownexpenses.data.repository.DefaultCategorySeeder
 import com.nackie.ownexpenses.data.repository.RoomCategoryRepository
 import com.nackie.ownexpenses.data.repository.RoomTransactionRepository
+import com.nackie.ownexpenses.domain.PeriodSelection
+import com.nackie.ownexpenses.domain.SystemTodayProvider
+import com.nackie.ownexpenses.domain.TodayProvider
 import com.nackie.ownexpenses.domain.repository.CategoryRepository
 import com.nackie.ownexpenses.domain.repository.SettingsRepository
 import com.nackie.ownexpenses.domain.repository.TransactionRepository
+import com.nackie.ownexpenses.presentation.home.HomeViewModel
+import com.nackie.ownexpenses.presentation.quickentry.QuickEntryViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import org.koin.core.module.Module
+import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 import kotlin.time.Clock
 
@@ -33,8 +39,14 @@ val sharedModule: Module =
         single<TransactionRepository> { RoomTransactionRepository(get(), get()) }
         single<SettingsRepository> { DataStoreSettingsRepository(get()) }
 
+        single<TodayProvider> { SystemTodayProvider(get()) }
+        single { PeriodSelection(get()) }
+
         single { DefaultCategorySeeder(get(), get(), get()) }
         single { AppInitializer(get(), CoroutineScope(SupervisorJob() + Dispatchers.Default)) }
+
+        viewModelOf(::HomeViewModel)
+        viewModelOf(::QuickEntryViewModel)
     }
 
 internal expect val platformModule: Module

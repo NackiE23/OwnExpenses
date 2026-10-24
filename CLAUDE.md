@@ -49,8 +49,10 @@ docs/         TZ.md, design-reference/
 
 Пакети (`com.nackie.ownexpenses`):
 
-- `shared`: `domain.model` (моделі), `domain.repository` (інтерфейси репозиторіїв), `data.local` (Room: `AppDatabase`, `entity`, `dao`), `data.settings` (DataStore), `data.repository` (реалізації, сідер категорій), `di` (`sharedModule` + `platformModule` через expect/actual), `AppInitializer` (разовий старт: категорії за замовчуванням).
-- `sharedUi`: `ui` (`App`), `ui.di` (`uiModule`), `ui.theme`, `ui.navigation`, `ui.components`, по пакету на екран (`ui.categories`, `ui.operations`, `ui.statistics`, `ui.more`). Клас ресурсів: `com.nackie.ownexpenses.ui.resources.Res`.
+- `shared`: `domain.model` (моделі), `domain.repository` (інтерфейси репозиторіїв), `data.local` (Room: `AppDatabase`, `entity`, `dao`), `data.settings` (DataStore), `data.repository` (реалізації, сідер категорій), `di` (`sharedModule` + `platformModule` через expect/actual), `AppInitializer` (разовий старт: категорії за замовчуванням), `domain` (`TodayProvider`, `PeriodSelection`: один вибір періоду на всі екрани), `presentation` (ViewModel по пакету на екран, `presentation.format.MoneyFormatter`).
+- `sharedUi`: `ui` (`App`, `UiTestTags`), `ui.di` (`uiModule`), `ui.theme`, `ui.navigation`, `ui.components`, `ui.format` (дати, періоди, гроші за мовою UI), по пакету на екран (`ui.home`, `ui.quickentry`, `ui.operations`, `ui.statistics`, `ui.more`). Клас ресурсів: `com.nackie.ownexpenses.ui.resources.Res`.
+
+Елементи, які чіпають UI-тести, мають тег з `UiTestTags`; тести не шукають за текстом, бо він залежить від мови.
 
 iOS-таргети (`iosArm64`, `iosSimulatorArm64`) тримають commonMain платформно-нейтральним: Android API там не скомпілюється. Платформний код лише в `androidMain` / `iosMain`; кожен `expect` має `actual` для обох платформ. iOS-klib компілюються й на Windows (без лінкування і Xcode), це перевіряє CI. Таргет `jvm` у `shared` існує лише для тестів: Room-тести в `jvmTest` ганяють справжній SQLite без емулятора.
 
@@ -88,9 +90,10 @@ JDK 21 (Gradle сам підтягує Zulu 21 за `gradle/gradle-daemon-jvm.pr
 ./gradlew spotlessCheck                    # ktlint + Compose rules; spotlessApply виправляє
 ./gradlew :androidApp:lintDebug            # Android Lint, з перевіркою залежних модулів
 ./gradlew :shared:compileKotlinIosArm64 :sharedUi:compileKotlinIosArm64   # перевірка, що iOS-код компілюється
+./gradlew :androidApp:connectedDebugAndroidTest   # UI-тест швидкого вводу, потрібен емулятор (AVD Medium_Phone_API_37.0)
 ```
 
-CI: `.github/workflows/ci.yml` запускає все це плюс release-збірку на кожен push у master і PR.
+CI: `.github/workflows/ci.yml` запускає все це, крім UI-тесту на емуляторі, плюс release-збірку на кожен push у master і PR. Після `connectedDebugAndroidTest` Gradle видаляє застосунок з емулятора.
 
 ## Робота над кодом
 

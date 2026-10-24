@@ -1,0 +1,52 @@
+package com.nackie.ownexpenses.presentation.format
+
+import com.nackie.ownexpenses.domain.model.AmountInput
+import kotlin.math.absoluteValue
+
+/**
+ * Formats amounts for display: grouped thousands, kopiykas only when non-zero, currency
+ * symbol after the number ("2 086 ₴", "−150,50 ₴"). Separators come from the UI locale.
+ */
+class MoneyFormatter(
+    private val decimalSeparator: Char,
+    private val groupingSeparator: Char,
+    private val currencySymbol: String = UAH_SYMBOL,
+) {
+    fun format(minorUnits: Long): String {
+        val sign = if (minorUnits < 0) MINUS_SIGN else ""
+        val absolute = minorUnits.absoluteValue
+        val whole = group((absolute / 100).toString())
+        val fraction = absolute % 100
+        val fractionPart = if (fraction == 0L) "" else decimalSeparator + fraction.toString().padStart(2, '0')
+        return "$sign$whole$fractionPart$NO_BREAK_SPACE$currencySymbol"
+    }
+
+    /** Amount as typed on the keypad, keeping a trailing separator or zeros ("12,", "12,50"). */
+    fun formatInput(input: AmountInput): String {
+        val whole = group(input.whole.ifEmpty { "0" })
+        val fraction = input.fraction?.let { decimalSeparator + it }.orEmpty()
+        return "$whole$fraction$NO_BREAK_SPACE$currencySymbol"
+    }
+
+    val decimalSeparatorLabel: String get() = decimalSeparator.toString()
+
+    private fun group(digits: String): String =
+        digits
+            .reversed()
+            .chunked(3)
+            .joinToString(groupingSeparator.toString())
+            .reversed()
+
+    companion object {
+        const val UAH_SYMBOL = "₴"
+        private const val MINUS_SIGN = "−"
+        private const val NO_BREAK_SPACE = ' '
+
+        /** Ukrainian conventions: decimal comma, (no-break) space between thousands. */
+        val Ukrainian = MoneyFormatter(decimalSeparator = ',', groupingSeparator = NO_BREAK_SPACE)
+
+        val English = MoneyFormatter(decimalSeparator = '.', groupingSeparator = ',')
+
+        fun forLanguage(languageCode: String): MoneyFormatter = if (languageCode == "uk") Ukrainian else English
+    }
+}

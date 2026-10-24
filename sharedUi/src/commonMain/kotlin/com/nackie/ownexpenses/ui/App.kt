@@ -18,7 +18,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.nackie.ownexpenses.ui.categories.CategoriesScreen
+import com.nackie.ownexpenses.ui.home.HomeScreen
 import com.nackie.ownexpenses.ui.more.MoreScreen
 import com.nackie.ownexpenses.ui.navigation.CategoriesRoute
 import com.nackie.ownexpenses.ui.navigation.MoreRoute
@@ -52,7 +52,7 @@ fun App(modifier: Modifier = Modifier) {
                 startDestination = CategoriesRoute,
                 modifier = Modifier.padding(innerPadding),
             ) {
-                composable<CategoriesRoute> { CategoriesScreen() }
+                composable<CategoriesRoute> { HomeScreen() }
                 composable<OperationsRoute> { OperationsScreen() }
                 composable<StatisticsRoute> { StatisticsScreen() }
                 composable<MoreRoute> { MoreScreen() }

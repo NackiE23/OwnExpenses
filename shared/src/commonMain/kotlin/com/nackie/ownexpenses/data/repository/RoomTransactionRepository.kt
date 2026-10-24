@@ -7,11 +7,15 @@ import com.nackie.ownexpenses.data.local.entity.CategoryEntity
 import com.nackie.ownexpenses.data.local.entity.TransactionEntity
 import com.nackie.ownexpenses.data.local.toDomain
 import com.nackie.ownexpenses.data.local.toEntity
+import com.nackie.ownexpenses.domain.model.Period
+import com.nackie.ownexpenses.domain.model.PeriodTotals
 import com.nackie.ownexpenses.domain.model.Transaction
 import com.nackie.ownexpenses.domain.model.TransactionInput
+import com.nackie.ownexpenses.domain.model.TransactionType
 import com.nackie.ownexpenses.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 import kotlin.time.Clock
 
@@ -23,6 +27,32 @@ internal class RoomTransactionRepository(
     private val categoryDao = database.categoryDao()
 
     override fun observeBalance(asOf: LocalDate): Flow<Long> = dao.observeBalance(asOf).distinctUntilChanged()
+
+    override fun observePeriodTotals(period: Period): Flow<PeriodTotals> =
+        dao
+            .observeTotalsByType(period.start, period.endInclusive)
+            .map { rows ->
+                val byType = rows.associate { it.type to it.total }
+                PeriodTotals(
+                    expenseMinor = byType[TransactionType.EXPENSE] ?: 0,
+                    incomeMinor = byType[TransactionType.INCOME] ?: 0,
+                )
+            }.distinctUntilChanged()
+
+    override fun observeCategoryTotals(
+        type: TransactionType,
+        period: Period,
+    ): Flow<Map<Long, Long>> =
+        dao
+            .observeTopLevelCategoryTotals(type, period.start, period.endInclusive)
+            .map { rows -> rows.associate { it.categoryId to it.total } }
+            .distinctUntilChanged()
+
+    override fun observeCategoryUsage(period: Period): Flow<Map<Long, Long>> =
+        dao
+            .observeTopLevelCategoryUsage(period.start, period.endInclusive)
+            .map { rows -> rows.associate { it.categoryId to it.total } }
+            .distinctUntilChanged()
 
     override suspend fun getTransaction(id: Long): Transaction? = dao.getById(id)?.toDomain()
 

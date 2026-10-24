@@ -1,0 +1,62 @@
+<resources>
+    <string name="balance_title">Загальний баланс</string>
+    <string name="type_expenses">Витрати</string>
+    <string name="type_incomes">Надходження</string>
+    <string name="period_previous">Попередній період</string>
+    <string name="period_next">Наступний період</string>
+    <string name="period_all_time">Увесь час</string>
+    <string name="home_no_categories">Категорій поки немає</string>
+
+    <string name="quick_entry_add">Додати</string>
+    <string name="quick_entry_delete_digit">Стерти цифру</string>
+    <string name="quick_entry_previous_day">Попередній день</string>
+    <string name="quick_entry_next_day">Наступний день</string>
+    <string name="quick_entry_pick_date">Вибрати дату</string>
+    <string name="quick_entry_add_description">Додати опис</string>
+    <string name="quick_entry_description">Опис</string>
+    <string name="quick_entry_amount">Сума</string>
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_cancel">Скасувати</string>
+
+    <string name="snackbar_expense_added">Витрату додано</string>
+    <string name="snackbar_income_added">Надходження додано</string>
+    <string name="snackbar_save_failed">Не вдалося зберегти: категорії вже немає</string>
+    <string name="snackbar_undo">Скасувати</string>
+
+    <string name="date_today">Сьогодні, %1$s</string>
+    <string name="date_yesterday">Вчора, %1$s</string>
+    <string name="date_tomorrow">Завтра, %1$s</string>
+    <string name="date_day_month">%1$s %2$s</string>
+    <string name="date_day_month_year">%1$s %2$s %3$s</string>
+    <string name="date_month_year">%1$s %2$s</string>
+    <string name="date_range">%1$s – %2$s</string>
+
+    <string-array name="months_standalone">
+        <item>Січень</item>
+        <item>Лютий</item>
+        <item>Березень</item>
+        <item>Квітень</item>
+        <item>Травень</item>
+        <item>Червень</item>
+        <item>Липень</item>
+        <item>Серпень</item>
+        <item>Вересень</item>
+        <item>Жовтень</item>
+        <item>Листопад</item>
+        <item>Грудень</item>
+    </string-array>
+    <string-array name="months_with_day">
+        <item>січня</item>
+        <item>лютого</item>
+        <item>березня</item>
+        <item>квітня</item>
+        <item>травня</item>
+        <item>червня</item>
+        <item>липня</item>
+        <item>серпня</item>
+        <item>вересня</item>
+        <item>жовтня</item>
+        <item>листопада</item>
+        <item>грудня</item>
+    </string-array>
+</resources>

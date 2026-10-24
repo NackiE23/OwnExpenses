@@ -1,0 +1,66 @@
+<resources>
+    <!-- Main screen -->
+    <string name="balance_title">Overall balance</string>
+    <string name="type_expenses">Expenses</string>
+    <string name="type_incomes">Incomes</string>
+    <string name="period_previous">Previous period</string>
+    <string name="period_next">Next period</string>
+    <string name="period_all_time">All time</string>
+    <string name="home_no_categories">No categories yet</string>
+
+    <!-- Quick entry panel -->
+    <string name="quick_entry_add">Add</string>
+    <string name="quick_entry_delete_digit">Delete digit</string>
+    <string name="quick_entry_previous_day">Previous day</string>
+    <string name="quick_entry_next_day">Next day</string>
+    <string name="quick_entry_pick_date">Pick a date</string>
+    <string name="quick_entry_add_description">Add description</string>
+    <string name="quick_entry_description">Description</string>
+    <string name="quick_entry_amount">Amount</string>
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_cancel">Cancel</string>
+
+    <string name="snackbar_expense_added">Expense added</string>
+    <string name="snackbar_income_added">Income added</string>
+    <string name="snackbar_save_failed">Could not save, the category no longer exists</string>
+    <string name="snackbar_undo">Undo</string>
+
+    <!-- Dates. Arguments are strings: %1$s day, %2$s month name, %3$s year. -->
+    <string name="date_today">Today, %1$s</string>
+    <string name="date_yesterday">Yesterday, %1$s</string>
+    <string name="date_tomorrow">Tomorrow, %1$s</string>
+    <string name="date_day_month">%2$s %1$s</string>
+    <string name="date_day_month_year">%2$s %1$s, %3$s</string>
+    <string name="date_month_year">%1$s %2$s</string>
+    <string name="date_range">%1$s – %2$s</string>
+
+    <string-array name="months_standalone">
+        <item>January</item>
+        <item>February</item>
+        <item>March</item>
+        <item>April</item>
+        <item>May</item>
+        <item>June</item>
+        <item>July</item>
+        <item>August</item>
+        <item>September</item>
+        <item>October</item>
+        <item>November</item>
+        <item>December</item>
+    </string-array>
+    <!-- Month form used after a day number ("24 жовтня" in Ukrainian). -->
+    <string-array name="months_with_day">
+        <item>January</item>
+        <item>February</item>
+        <item>March</item>
+        <item>April</item>
+        <item>May</item>
+        <item>June</item>
+        <item>July</item>
+        <item>August</item>
+        <item>September</item>
+        <item>October</item>
+        <item>November</item>
+        <item>December</item>
+    </string-array>
+</resources>

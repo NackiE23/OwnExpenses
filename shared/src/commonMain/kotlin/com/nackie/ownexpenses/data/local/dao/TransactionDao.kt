@@ -1,12 +1,25 @@
 package com.nackie.ownexpenses.data.local.dao
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import com.nackie.ownexpenses.data.local.entity.TransactionEntity
+import com.nackie.ownexpenses.domain.model.TransactionType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
+
+internal data class TypeTotal(
+    val type: TransactionType,
+    val total: Long,
+)
+
+internal data class CategoryTotal(
+    @ColumnInfo(name = "category_id")
+    val categoryId: Long,
+    val total: Long,
+)
 
 @Dao
 internal interface TransactionDao {
@@ -19,6 +32,48 @@ internal interface TransactionDao {
         """,
     )
     fun observeBalance(asOf: LocalDate): Flow<Long>
+
+    @Query(
+        """
+        SELECT type, SUM(amount_minor) AS total
+        FROM transactions
+        WHERE date BETWEEN :from AND :to
+        GROUP BY type
+        """,
+    )
+    fun observeTotalsByType(
+        from: LocalDate,
+        to: LocalDate,
+    ): Flow<List<TypeTotal>>
+
+    /** Totals per top-level category; records in a subcategory count towards its parent. */
+    @Query(
+        """
+        SELECT COALESCE(c.parent_id, c.id) AS category_id, SUM(t.amount_minor) AS total
+        FROM transactions t JOIN categories c ON c.id = t.category_id
+        WHERE t.type = :type AND t.date BETWEEN :from AND :to
+        GROUP BY COALESCE(c.parent_id, c.id)
+        """,
+    )
+    fun observeTopLevelCategoryTotals(
+        type: TransactionType,
+        from: LocalDate,
+        to: LocalDate,
+    ): Flow<List<CategoryTotal>>
+
+    /** Number of records per top-level category, subcategories included. */
+    @Query(
+        """
+        SELECT COALESCE(c.parent_id, c.id) AS category_id, COUNT(*) AS total
+        FROM transactions t JOIN categories c ON c.id = t.category_id
+        WHERE t.date BETWEEN :from AND :to
+        GROUP BY COALESCE(c.parent_id, c.id)
+        """,
+    )
+    fun observeTopLevelCategoryUsage(
+        from: LocalDate,
+        to: LocalDate,
+    ): Flow<List<CategoryTotal>>
 
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getById(id: Long): TransactionEntity?
