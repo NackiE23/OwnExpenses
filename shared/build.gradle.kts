@@ -12,6 +12,9 @@ kotlin {
     iosArm64()
     iosSimulatorArm64()
 
+    // Host-only target: runs database tests against real SQLite without an emulator.
+    jvm()
+
     android {
         namespace = "com.nackie.ownexpenses.shared"
         compileSdk =
@@ -60,6 +63,7 @@ dependencies {
     add("kspAndroid", libs.androidx.room.compiler)
     add("kspIosArm64", libs.androidx.room.compiler)
     add("kspIosSimulatorArm64", libs.androidx.room.compiler)
+    add("kspJvm", libs.androidx.room.compiler)
 }
 
 room {

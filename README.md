@@ -22,7 +22,7 @@ Kotlin Multiplatform, Compose Multiplatform, Room (KMP, bundled SQLite), DataSto
 
 ```
 ./gradlew :androidApp:assembleDebug
-./gradlew :shared:testAndroidHostTest
+./gradlew :shared:jvmTest :shared:testAndroidHostTest
 ./gradlew spotlessCheck          # spotlessApply to fix
 ./gradlew :androidApp:lintDebug
 ./gradlew :shared:compileKotlinIosArm64 :sharedUi:compileKotlinIosArm64

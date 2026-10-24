@@ -6,6 +6,8 @@ import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import com.nackie.ownexpenses.data.local.dao.CategoryDao
+import com.nackie.ownexpenses.data.local.dao.TransactionDao
 import com.nackie.ownexpenses.data.local.entity.CategoryEntity
 import com.nackie.ownexpenses.data.local.entity.TransactionEntity
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +24,11 @@ import kotlinx.coroutines.IO
 )
 @TypeConverters(Converters::class)
 @ConstructedBy(AppDatabaseConstructor::class)
-abstract class AppDatabase : RoomDatabase()
+abstract class AppDatabase : RoomDatabase() {
+    internal abstract fun categoryDao(): CategoryDao
+
+    internal abstract fun transactionDao(): TransactionDao
+}
 
 // Room generates the actual implementations.
 @Suppress("KotlinNoActualForExpect")

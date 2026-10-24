@@ -33,7 +33,7 @@ jobs:
         run: ./gradlew spotlessCheck
 
       - name: Unit tests
-        run: ./gradlew :shared:testAndroidHostTest
+        run: ./gradlew :shared:jvmTest :shared:testAndroidHostTest
 
       - name: Android lint
         run: ./gradlew :androidApp:lintDebug

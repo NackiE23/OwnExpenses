@@ -49,12 +49,14 @@ docs/         TZ.md, design-reference/
 
 Пакети (`com.nackie.ownexpenses`):
 
-- `shared`: `domain.model` (моделі), `data.local` (Room: `AppDatabase`, `entity`, DAO), `data.settings` (DataStore), `di` (`sharedModule` + `platformModule` через expect/actual).
-- `sharedUi`: `ui` (`App`), `ui.theme`, `ui.navigation`, `ui.components`, по пакету на екран (`ui.categories`, `ui.operations`, `ui.statistics`, `ui.more`). Клас ресурсів: `com.nackie.ownexpenses.ui.resources.Res`.
+- `shared`: `domain.model` (моделі), `domain.repository` (інтерфейси репозиторіїв), `data.local` (Room: `AppDatabase`, `entity`, `dao`), `data.settings` (DataStore), `data.repository` (реалізації, сідер категорій), `di` (`sharedModule` + `platformModule` через expect/actual), `AppInitializer` (разовий старт: категорії за замовчуванням).
+- `sharedUi`: `ui` (`App`), `ui.di` (`uiModule`), `ui.theme`, `ui.navigation`, `ui.components`, по пакету на екран (`ui.categories`, `ui.operations`, `ui.statistics`, `ui.more`). Клас ресурсів: `com.nackie.ownexpenses.ui.resources.Res`.
 
-iOS-таргети (`iosArm64`, `iosSimulatorArm64`) тримають commonMain платформно-нейтральним: Android API там не скомпілюється. Платформний код лише в `androidMain` / `iosMain`; кожен `expect` має `actual` для обох платформ. iOS-klib компілюються й на Windows (без лінкування і Xcode), це перевіряє CI.
+iOS-таргети (`iosArm64`, `iosSimulatorArm64`) тримають commonMain платформно-нейтральним: Android API там не скомпілюється. Платформний код лише в `androidMain` / `iosMain`; кожен `expect` має `actual` для обох платформ. iOS-klib компілюються й на Windows (без лінкування і Xcode), це перевіряє CI. Таргет `jvm` у `shared` існує лише для тестів: Room-тести в `jvmTest` ганяють справжній SQLite без емулятора.
 
 Схема Room експортується в `shared/schemas/` і комітиться.
+
+Назви категорій за замовчуванням лежать у рядках `sharedUi` (`category_*`); `shared` отримує їх через `DefaultCategoryNames`. Новий `DefaultCategory` потребує рядків uk/en і гілки в `ResourceDefaultCategoryNames`.
 
 ## Етапи
 
@@ -81,7 +83,8 @@ JDK 21 (Gradle сам підтягує Zulu 21 за `gradle/gradle-daemon-jvm.pr
 
 ```
 ./gradlew :androidApp:assembleDebug        # debug APK (applicationId з суфіксом .debug)
-./gradlew :shared:testAndroidHostTest      # модульні тести shared (commonTest + androidHostTest)
+./gradlew :shared:jvmTest                  # модульні тести shared, включно з Room на справжньому SQLite
+./gradlew :shared:testAndroidHostTest      # commonTest на Android-хості
 ./gradlew spotlessCheck                    # ktlint + Compose rules; spotlessApply виправляє
 ./gradlew :androidApp:lintDebug            # Android Lint, з перевіркою залежних модулів
 ./gradlew :shared:compileKotlinIosArm64 :sharedUi:compileKotlinIosArm64   # перевірка, що iOS-код компілюється

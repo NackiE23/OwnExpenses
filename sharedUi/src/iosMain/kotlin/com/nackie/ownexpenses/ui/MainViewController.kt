@@ -1,7 +1,9 @@
 package com.nackie.ownexpenses.ui
 
 import androidx.compose.ui.window.ComposeUIViewController
+import com.nackie.ownexpenses.AppInitializer
 import com.nackie.ownexpenses.di.sharedModule
+import com.nackie.ownexpenses.ui.di.uiModule
 import org.koin.core.context.startKoin
 import platform.UIKit.UIViewController
 
@@ -10,5 +12,6 @@ import platform.UIKit.UIViewController
 fun MainViewController(): UIViewController = ComposeUIViewController { App() }
 
 fun initKoin() {
-    startKoin { modules(sharedModule) }
+    val koin = startKoin { modules(sharedModule, uiModule) }.koin
+    koin.get<AppInitializer>().initialize()
 }

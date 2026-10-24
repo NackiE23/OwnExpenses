@@ -5,4 +5,22 @@
     <string name="tab_more">Більше</string>
 
     <string name="placeholder_coming_soon">Незабаром</string>
+
+    <string name="category_groceries">Продукти</string>
+    <string name="category_cafe">Кафе</string>
+    <string name="category_transport">Транспорт</string>
+    <string name="category_taxi">Таксі</string>
+    <string name="category_public_transport">Громадський транспорт</string>
+    <string name="category_home">Дім</string>
+    <string name="category_utilities">Комунальні</string>
+    <string name="category_mobile_internet">Звʼязок та інтернет</string>
+    <string name="category_health">Здоровʼя</string>
+    <string name="category_entertainment">Розваги</string>
+    <string name="category_clothes">Одяг</string>
+    <string name="category_pets">Тварини</string>
+    <string name="category_gifts">Подарунки</string>
+    <string name="category_other_expense">Інше</string>
+    <string name="category_salary">Зарплата</string>
+    <string name="category_gift_received">Подарунки</string>
+    <string name="category_other_income">Інше</string>
 </resources>

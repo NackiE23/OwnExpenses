@@ -5,4 +5,23 @@
     <string name="tab_more">More</string>
 
     <string name="placeholder_coming_soon">Coming soon</string>
+
+    <!-- Default categories, created once on first launch in the device language. -->
+    <string name="category_groceries">Groceries</string>
+    <string name="category_cafe">Cafe</string>
+    <string name="category_transport">Transport</string>
+    <string name="category_taxi">Taxi</string>
+    <string name="category_public_transport">Public transport</string>
+    <string name="category_home">Home</string>
+    <string name="category_utilities">Utilities</string>
+    <string name="category_mobile_internet">Mobile and internet</string>
+    <string name="category_health">Health</string>
+    <string name="category_entertainment">Entertainment</string>
+    <string name="category_clothes">Clothes</string>
+    <string name="category_pets">Pets</string>
+    <string name="category_gifts">Gifts</string>
+    <string name="category_other_expense">Other</string>
+    <string name="category_salary">Salary</string>
+    <string name="category_gift_received">Gifts</string>
+    <string name="category_other_income">Other</string>
 </resources>
