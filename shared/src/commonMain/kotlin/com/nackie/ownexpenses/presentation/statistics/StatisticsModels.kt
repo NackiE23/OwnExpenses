@@ -45,6 +45,30 @@ data class SubcategoryShare(
     val share: Float,
 )
 
+/** At most this many gridlines on the spending chart. */
+const val AXIS_LINES = 4
+
+/**
+ * Gridline values for the spending chart, in minor units: a round step of 1, 2 or 5 × 10ⁿ
+ * hryvnias (at least 1 ₴), at most [maxLines] lines, the last one at or above [maxMinor]. The
+ * chart scales to the last line, so bars can be read against the grid. Empty for an empty chart.
+ */
+fun valueAxisTicks(
+    maxMinor: Long,
+    maxLines: Int = AXIS_LINES,
+): List<Long> {
+    if (maxMinor <= 0) return emptyList()
+    val rawStep = (maxMinor + maxLines - 1) / maxLines
+    var magnitude = MINOR_PER_MAJOR
+    while (magnitude * 10 < rawStep) magnitude *= 10
+    val step = NICE_STEPS.map { it * magnitude }.first { it >= rawStep }
+    val count = (maxMinor + step - 1) / step
+    return (1..count).map { it * step }
+}
+
+private const val MINOR_PER_MAJOR = 100L
+private val NICE_STEPS = listOf(1L, 2L, 5L, 10L)
+
 /** Periods up to this many days get one bar per day; longer ones one bar per month. */
 const val MAX_DAILY_BARS = 62
 

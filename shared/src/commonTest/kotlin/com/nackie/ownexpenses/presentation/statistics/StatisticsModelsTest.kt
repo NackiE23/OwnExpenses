@@ -139,4 +139,23 @@ class StatisticsModelsTest {
         sortOrder = id.toInt(),
         isArchived = false,
     )
+
+    @Test
+    fun axisUsesRoundStepsUpToFourLines() {
+        // 589 ₴: 148 ₴ per line rounds up to 200 ₴.
+        assertEquals(listOf(200_00L, 400_00L, 600_00L), valueAxisTicks(589_00))
+        // 5 126 ₴: 2 000 ₴ steps.
+        assertEquals(listOf(2000_00L, 4000_00L, 6000_00L), valueAxisTicks(5126_00))
+        // Exactly on a line: no extra line above.
+        assertEquals(listOf(1000_00L, 2000_00L, 3000_00L, 4000_00L), valueAxisTicks(4000_00))
+        // 13 000 ₴: 5 000 ₴ steps.
+        assertEquals(listOf(5000_00L, 10000_00L, 15000_00L), valueAxisTicks(13000_00))
+    }
+
+    @Test
+    fun axisStepIsAtLeastOneHryvnia() {
+        assertEquals(listOf(1_00L, 2_00L), valueAxisTicks(1_50))
+        assertEquals(listOf(1_00L), valueAxisTicks(5))
+        assertEquals(emptyList(), valueAxisTicks(0))
+    }
 }

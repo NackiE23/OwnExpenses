@@ -26,6 +26,9 @@ class MoneyFormatter(
     /** Like [format], with an explicit plus for positive amounts ("+1 000 ₴", "-89 ₴"). */
     fun formatSigned(minorUnits: Long): String = if (minorUnits > 0) "+" + format(minorUnits) else format(minorUnits)
 
+    /** Whole hryvnias, grouped, without the symbol: chart axis labels ("2 000"). */
+    fun formatWhole(minorUnits: Long): String = group((minorUnits.absoluteValue / 100).toString())
+
     /** Amount as typed on the keypad, keeping a trailing separator or zeros ("12,", "12,50"). */
     fun formatInput(input: AmountInput): String = "${formatNumber(input)}$NO_BREAK_SPACE$currencySymbol"
 

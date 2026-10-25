@@ -12,23 +12,29 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import com.nackie.ownexpenses.presentation.statistics.BarGranularity
 import com.nackie.ownexpenses.presentation.statistics.SpendingChart
+import com.nackie.ownexpenses.presentation.statistics.valueAxisTicks
 import com.nackie.ownexpenses.ui.format.dayMonth
 import com.nackie.ownexpenses.ui.format.monthShort
 import com.nackie.ownexpenses.ui.format.monthYear
@@ -43,16 +49,20 @@ private const val DONUT_STROKE_FRACTION = 0.14f
 private const val SELECTED_STROKE_SCALE = 1.3f
 private const val DIMMED_ALPHA = 0.35f
 private const val TOUCH_SLACK = 2f
+private const val GRID_ALPHA = 0.6f
+private val LABEL_GAP = 6.dp
 
 /**
- * Expense bars drawn on a Canvas. [selectedIndex] is highlighted; tapping picks the bar under
- * the finger, so the screen can show its date and amount.
+ * Expense bars drawn on a Canvas over a grid of round amounts (see [valueAxisTicks]), labelled
+ * on the left. [selectedIndex] is highlighted; tapping picks the bar under the finger, so the
+ * screen can show its exact date and amount.
  */
 @Composable
 internal fun SpendingBarChart(
     chart: SpendingChart,
     selectedIndex: Int?,
     onSelect: (Int) -> Unit,
+    axisLabel: (Long) -> String,
     description: String,
     modifier: Modifier = Modifier,
     height: Dp = 160.dp,
@@ -60,8 +70,19 @@ internal fun SpendingBarChart(
     val barColor = MaterialTheme.colorScheme.primary
     val dimmedColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
     val baselineColor = MaterialTheme.colorScheme.outlineVariant
+    val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = GRID_ALPHA)
+    val labelStyle = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
     val bars = chart.bars
-    val max = chart.maxMinor.coerceAtLeast(1)
+    val ticks = remember(chart) { valueAxisTicks(chart.maxMinor) }
+    val top = (ticks.lastOrNull() ?: chart.maxMinor).coerceAtLeast(1)
+
+    val textMeasurer = rememberTextMeasurer()
+    val labels =
+        remember(ticks, labelStyle, axisLabel) { ticks.map { textMeasurer.measure(axisLabel(it), labelStyle) } }
+    val density = LocalDensity.current
+    // Room on the left for the widest label, and half a label above the top line.
+    val gutter = labels.maxOfOrNull { it.size.width }?.let { it + with(density) { LABEL_GAP.toPx() } } ?: 0f
+    val topInset = (labels.firstOrNull()?.size?.height ?: 0) / 2f
 
     Column(modifier = modifier) {
         Canvas(
@@ -70,44 +91,74 @@ internal fun SpendingBarChart(
                     .fillMaxWidth()
                     .height(height)
                     .semantics { contentDescription = description }
-                    .pointerInput(bars.size) {
+                    .pointerInput(bars.size, gutter) {
                         detectTapGestures { offset ->
-                            if (bars.isNotEmpty()) {
-                                onSelect((offset.x / (size.width / bars.size)).toInt().coerceIn(0, bars.lastIndex))
+                            if (bars.isNotEmpty() && offset.x >= gutter) {
+                                val slot = (size.width - gutter) / bars.size
+                                onSelect(((offset.x - gutter) / slot).toInt().coerceIn(0, bars.lastIndex))
                             }
                         }
                     },
         ) {
             if (bars.isEmpty()) return@Canvas
-            val slot = size.width / bars.size
+            val plotHeight = size.height - topInset
+            val plotWidth = size.width - gutter
+
+            fun yOf(amount: Long) = topInset + plotHeight * (1f - amount.toFloat() / top)
+
+            ticks.forEachIndexed { index, tick ->
+                val y = yOf(tick)
+                drawLine(
+                    color = gridColor,
+                    start = Offset(gutter, y),
+                    end = Offset(size.width, y),
+                    strokeWidth = 1.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx())),
+                )
+                val label = labels[index]
+                drawText(
+                    textLayoutResult = label,
+                    topLeft = Offset(gutter - LABEL_GAP.toPx() - label.size.width, y - label.size.height / 2f),
+                )
+            }
+
+            val slot = plotWidth / bars.size
             val barWidth = slot * BAR_FILL
             val radius = CornerRadius(barWidth / 4, barWidth / 4)
             bars.forEachIndexed { index, bar ->
                 if (bar.totalMinor == 0L) return@forEachIndexed
-                val fraction = (bar.totalMinor.toFloat() / max).coerceAtLeast(MIN_VISIBLE_BAR_FRACTION)
-                val barHeight = size.height * fraction
+                val fraction = (bar.totalMinor.toFloat() / top).coerceAtLeast(MIN_VISIBLE_BAR_FRACTION)
+                val barHeight = plotHeight * fraction
                 val highlighted = selectedIndex == null || selectedIndex == index
                 drawRoundRect(
                     color = if (highlighted) barColor else dimmedColor,
-                    topLeft = Offset(index * slot + (slot - barWidth) / 2, size.height - barHeight),
+                    topLeft = Offset(gutter + index * slot + (slot - barWidth) / 2, size.height - barHeight),
                     size = Size(barWidth, barHeight),
                     cornerRadius = radius,
                 )
             }
-            drawLine(baselineColor, Offset(0f, size.height), Offset(size.width, size.height), strokeWidth = 1.dp.toPx())
+            drawLine(
+                baselineColor,
+                Offset(gutter, size.height),
+                Offset(size.width, size.height),
+                strokeWidth = 1.dp.toPx(),
+            )
         }
         if (bars.isNotEmpty()) {
-            AxisLabels(chart)
+            AxisLabels(chart, modifier = Modifier.padding(start = with(density) { gutter.toDp() }))
         }
     }
 }
 
 /** First, middle and last bar labels: enough to orient without crowding narrow screens. */
 @Composable
-private fun AxisLabels(chart: SpendingChart) {
+private fun AxisLabels(
+    chart: SpendingChart,
+    modifier: Modifier = Modifier,
+) {
     val bars = chart.bars
     val indices = listOf(0, bars.lastIndex / 2, bars.lastIndex).distinct()
-    Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+    Row(modifier = modifier.fillMaxWidth().padding(top = 4.dp)) {
         indices.forEachIndexed { position, index ->
             val date = bars[index].start
             val label = if (chart.granularity == BarGranularity.DAY) date.day.toString() else monthShort(date)

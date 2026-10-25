@@ -43,6 +43,7 @@ import com.nackie.ownexpenses.ui.components.categoryContentColor
 import com.nackie.ownexpenses.ui.format.percentLabel
 import com.nackie.ownexpenses.ui.format.rememberMoneyFormatter
 import com.nackie.ownexpenses.ui.period.PeriodSwitcher
+import com.nackie.ownexpenses.ui.period.periodSwipe
 import com.nackie.ownexpenses.ui.resources.Res
 import com.nackie.ownexpenses.ui.resources.ic_arrow_drop_down
 import com.nackie.ownexpenses.ui.resources.stats_bar_chart_description
@@ -91,7 +92,14 @@ private fun StatisticsContent(
     var expandedCategoryId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .periodSwipe(
+                    enabled = state.period != Period.AllTime,
+                    onPrevious = onPreviousPeriod,
+                    onNext = onNextPeriod,
+                ),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -190,6 +198,7 @@ private fun BarsCard(
                 chart = chart,
                 selectedIndex = selected,
                 onSelect = { selected = if (selected == it) null else it },
+                axisLabel = formatter::formatWhole,
                 description =
                     stringResource(
                         Res.string.stats_bar_chart_description,
