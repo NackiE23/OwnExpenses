@@ -99,7 +99,9 @@ jobs:
           echo "Using $apksigner"
           certs=$("$apksigner" verify --print-certs "$apk")
           echo "$certs"
-          actual=$(echo "$certs" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          # "Signer #1 certificate SHA-256 digest: …" before build-tools 37, "V2 Signer: certificate …" since.
+          # Every signer must be the release key, so all digests found must be that one.
+          actual=$(echo "$certs" | sed -n -E 's/.*[Ss]igner.*certificate SHA-256 digest: ([0-9a-f]+).*/\1/p' | sort -u)
           if [ "$actual" != "$EXPECTED_CERT_SHA256" ]; then
             echo "::error::APK is signed with $actual, expected the release key $EXPECTED_CERT_SHA256"
             exit 1
