@@ -103,7 +103,7 @@ JDK 21 (Gradle сам підтягує Zulu 21 за `gradle/gradle-daemon-jvm.pr
 ./gradlew :androidApp:connectedDebugAndroidTest   # UI-тест швидкого вводу, потрібен емулятор (AVD Medium_Phone_API_37.0)
 ```
 
-CI: `.github/workflows/ci.yml` запускає все це, крім UI-тесту на емуляторі, плюс release-збірку на кожен push у master і PR. Після `connectedDebugAndroidTest` Gradle видаляє застосунок з емулятора.
+CI: `.github/workflows/ci.yml` запускає все це, крім UI-тесту на емуляторі, плюс release-збірку на кожен push у master і PR. Після `connectedDebugAndroidTest` Gradle видаляє застосунок з емулятора. `.github/workflows/release.yml` збирає підписаний APK для опублікованого релізу (тег `v` + `versionName`) з ключем із секретів `RELEASE_KEYSTORE_BASE64` і `RELEASE_KEYSTORE_PASSWORD` і прикріплює його до релізу.
 
 Реліз: підписаний APK без Google Play, інструкція в `docs/RELEASE.md`. Ключ і паролі лише в `keystore.properties` (ігнорується git, шаблон `keystore.properties.example`); без нього release-збірка непідписана. Кожен реліз піднімає `versionCode`.
 

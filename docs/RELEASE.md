@@ -20,20 +20,43 @@
 
 2. Скопіюйте `keystore.properties.example` у `keystore.properties` у корені проєкту й заповніть: шлях до ключа, пароль (той самий у `storePassword` і `keyPassword`), псевдонім `ownexpenses`. Файл ігнорується git.
 
-Без `keystore.properties` release-збірка лишається непідписаною (так працює CI) і на телефон не встановлюється.
+Без `keystore.properties` release-збірка лишається непідписаною (так працює звичайний CI) і на телефон не встановлюється.
 
-## Збірка релізу
+## Збірка релізу через GitHub (основний спосіб)
+
+Workflow `.github/workflows/release.yml` сам збирає підписаний APK і прикріплює його до релізу, тож комп'ютер з ключем для релізу не потрібен.
+
+**Один раз: секрети репозиторію.** GitHub → Settings → Secrets and variables → Actions → New repository secret:
+
+- `RELEASE_KEYSTORE_PASSWORD`: пароль ключа.
+- `RELEASE_KEYSTORE_BASE64`: файл ключа текстом. Ця команда кладе його в буфер обміну, звідти вставте в поле секрету (на диск нічого не пишеться):
+
+  ```powershell
+  [Convert]::ToBase64String([IO.File]::ReadAllBytes("$HOME\keys\ownexpenses-release.jks")) | Set-Clipboard
+  ```
+
+Значення секретів після збереження не видно нікому, навіть власнику; workflow отримує їх лише під час збірки.
+
+**Кожен реліз:**
+
+1. Підніміть `versionCode` на 1 і `versionName` в `androidApp/build.gradle.kts`, закомітьте й запуште в master.
+2. На GitHub: Releases → Draft a new release → новий тег `v` + `versionName` (наприклад `v1.3.0`) на master → Publish release.
+3. Через кілька хвилин у релізі з'явиться `OwnExpenses-1.3.0.apk` (вкладка Actions → Release APK показує хід збірки).
+
+Workflow зупиняється з помилкою, якщо тег не збігається з `versionName`, якщо секретів немає або якщо APK підписано не тим ключем (порівнює відбиток сертифіката з відомим). Для вже створеного релізу APK можна зібрати вручну: Actions → Release APK → Run workflow → тег.
+
+Тег прив'язаний до конкретного коміту, тож нові коміти в master на вже створений реліз не впливають.
+
+## Збірка релізу локально (запасний спосіб)
 
 1. Підніміть `versionCode` на 1 і за потреби `versionName` в `androidApp/build.gradle.kts`.
-2. Зберіть:
+2. Зберіть (у PowerShell спершу `$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"`):
 
    ```bash
    ./gradlew :androidApp:assembleRelease
    ```
 
 3. Готовий файл: `androidApp/build/outputs/apk/release/androidApp-release.apk`.
-
-APK зберігається в GitHub Releases: новий реліз з тегом версії (`v1.0.0`, `v1.1.0`…) і APK у вкладеннях. Тег прив’язаний до конкретного коміту, тож нові коміти в master на вже створений реліз не впливають.
 
 ## Встановлення на телефон
 
