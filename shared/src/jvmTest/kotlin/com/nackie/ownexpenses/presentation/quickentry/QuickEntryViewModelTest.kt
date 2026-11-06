@@ -97,8 +97,8 @@ internal class QuickEntryViewModelTest : MainDispatcherTest() {
                 viewModel.open(transport)
                 viewModel.onSubcategoryClick(taxi.id)
                 viewModel.shiftDate(-1)
-                viewModel.expandDescription()
-                viewModel.onDescriptionChange("  Airport ")
+                viewModel.openDescriptionDialog()
+                viewModel.saveDescription("  Airport ")
                 press(8, 9)
                 viewModel.onKey(AmountKey.DecimalSeparator)
                 press(5)
@@ -212,7 +212,7 @@ internal class QuickEntryViewModelTest : MainDispatcherTest() {
     @Test
     fun descriptionIsCapped() {
         viewModel.open(transport)
-        viewModel.onDescriptionChange("x".repeat(500))
+        viewModel.saveDescription("x".repeat(500))
 
         assertEquals(
             QuickEntryViewModel.MAX_DESCRIPTION_LENGTH,
@@ -220,6 +220,22 @@ internal class QuickEntryViewModelTest : MainDispatcherTest() {
                 ?.description
                 ?.length,
         )
+    }
+
+    @Test
+    fun descriptionDialogKeepsTextOnlyWhenConfirmed() {
+        viewModel.open(transport)
+
+        viewModel.openDescriptionDialog()
+        assertEquals(true, viewModel.uiState.value?.isDescriptionDialogOpen)
+        viewModel.saveDescription("Airport")
+        assertEquals(false, viewModel.uiState.value?.isDescriptionDialogOpen)
+        assertEquals("Airport", viewModel.uiState.value?.description)
+
+        viewModel.openDescriptionDialog()
+        viewModel.dismissDescriptionDialog()
+        assertEquals(false, viewModel.uiState.value?.isDescriptionDialogOpen)
+        assertEquals("Airport", viewModel.uiState.value?.description)
     }
 
     private fun press(vararg digits: Int) {

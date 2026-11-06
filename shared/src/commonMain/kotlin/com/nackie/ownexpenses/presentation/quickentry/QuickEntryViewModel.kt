@@ -38,7 +38,8 @@ data class QuickEntryUiState(
     val date: LocalDate,
     val today: LocalDate,
     val description: String = "",
-    val isDescriptionExpanded: Boolean = false,
+    /** The description dialog is open; the text is committed only when it is confirmed. */
+    val isDescriptionDialogOpen: Boolean = false,
     val isSaving: Boolean = false,
     /** The record being edited; null when adding a new one. */
     val editing: Transaction? = null,
@@ -142,7 +143,6 @@ class QuickEntryViewModel(
                         date = transaction.date,
                         today = todayProvider.today(),
                         description = transaction.description.orEmpty(),
-                        isDescriptionExpanded = transaction.description != null,
                         editing = transaction,
                         categoryChoices =
                             tree
@@ -174,9 +174,13 @@ class QuickEntryViewModel(
 
     fun setDate(date: LocalDate) = edit { it.copy(date = date) }
 
-    fun expandDescription() = edit { it.copy(isDescriptionExpanded = true) }
+    fun openDescriptionDialog() = edit { it.copy(isDescriptionDialogOpen = true) }
 
-    fun onDescriptionChange(text: String) = edit { it.copy(description = text.take(MAX_DESCRIPTION_LENGTH)) }
+    fun dismissDescriptionDialog() = edit { it.copy(isDescriptionDialogOpen = false) }
+
+    /** Confirms the description dialog: keeps [text] (trimmed on save) and closes it. */
+    fun saveDescription(text: String) =
+        edit { it.copy(description = text.take(MAX_DESCRIPTION_LENGTH), isDescriptionDialogOpen = false) }
 
     fun submit() {
         val current = state.value ?: return

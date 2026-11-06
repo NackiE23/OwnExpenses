@@ -21,4 +21,9 @@ object UiTestTags {
     fun operatorKey(operator: String): String = "key_${operator.lowercase()}"
 
     const val DECIMAL_SEPARATOR_KEY = "key_separator"
+    const val DESCRIPTION_KEY = "key_description"
+
+    const val DESCRIPTION = "description"
+    const val DESCRIPTION_FIELD = "description_field"
+    const val DESCRIPTION_SAVE = "description_save"
 }

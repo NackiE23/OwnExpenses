@@ -74,7 +74,6 @@ internal class EditTransactionTest : MainDispatcherTest() {
             assertEquals(12_50L, state.amount.result)
             assertEquals(LocalDate(2026, 10, 20), state.date)
             assertEquals("Airport", state.description)
-            assertTrue(state.isDescriptionExpanded)
             assertEquals(listOf("Cafe", "Transport"), state.categoryChoices.map { it.category.name })
         }
 

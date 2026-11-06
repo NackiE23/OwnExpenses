@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -34,21 +36,29 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nackie.ownexpenses.domain.model.AmountExpression
@@ -85,6 +95,7 @@ import com.nackie.ownexpenses.ui.resources.quick_entry_pick_date
 import com.nackie.ownexpenses.ui.resources.quick_entry_previous_day
 import com.nackie.ownexpenses.ui.resources.quick_entry_result
 import com.nackie.ownexpenses.ui.resources.quick_entry_save
+import kotlinx.coroutines.flow.first
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -120,8 +131,9 @@ internal fun QuickEntryHost(
             onSelectCategory = viewModel::selectCategory,
             onShiftDate = viewModel::shiftDate,
             onPickDate = viewModel::setDate,
-            onExpandDescription = viewModel::expandDescription,
-            onDescriptionChange = viewModel::onDescriptionChange,
+            onOpenDescription = viewModel::openDescriptionDialog,
+            onDismissDescription = viewModel::dismissDescriptionDialog,
+            onSaveDescription = viewModel::saveDescription,
             onSubmit = viewModel::submit,
             onDelete = viewModel::deleteEdited,
         )
@@ -143,8 +155,9 @@ private fun QuickEntrySheet(
     onSelectCategory: (Long) -> Unit,
     onShiftDate: (Int) -> Unit,
     onPickDate: (LocalDate) -> Unit,
-    onExpandDescription: () -> Unit,
-    onDescriptionChange: (String) -> Unit,
+    onOpenDescription: () -> Unit,
+    onDismissDescription: () -> Unit,
+    onSaveDescription: (String) -> Unit,
     onSubmit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -180,12 +193,7 @@ private fun QuickEntrySheet(
                     }
                 }
             }
-            DescriptionField(
-                expanded = state.isDescriptionExpanded,
-                text = state.description,
-                onExpand = onExpandDescription,
-                onChange = onDescriptionChange,
-            )
+            if (state.description.isNotBlank()) DescriptionLine(text = state.description, onClick = onOpenDescription)
             AmountDisplay(amount = state.amount, formatter = formatter)
             AmountKeypad(
                 decimalSeparator = formatter.decimalSeparatorLabel,
@@ -194,10 +202,15 @@ private fun QuickEntrySheet(
                         if (state.isEditing) Res.string.quick_entry_save else Res.string.quick_entry_add,
                     ),
                 canSubmit = state.canSubmit,
+                hasDescription = state.description.isNotBlank(),
                 onKey = onKey,
+                onDescription = onOpenDescription,
                 onSubmit = onSubmit,
             )
         }
+    }
+    if (state.isDescriptionDialogOpen) {
+        DescriptionDialog(initialText = state.description, onDismiss = onDismissDescription, onSave = onSaveDescription)
     }
 }
 
@@ -377,29 +390,87 @@ private fun CategoryHeader(
     }
 }
 
+/** The saved description in place of a field; tapping it opens the dialog to change it. */
 @Composable
-private fun DescriptionField(
-    expanded: Boolean,
+private fun DescriptionLine(
     text: String,
-    onExpand: () -> Unit,
-    onChange: (String) -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (expanded) {
-        OutlinedTextField(
-            value = text,
-            onValueChange = onChange,
-            label = { Text(stringResource(Res.string.quick_entry_description)) },
-            singleLine = true,
-            keyboardOptions =
-                KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
-            modifier = modifier.fillMaxWidth(),
+    val label = stringResource(Res.string.quick_entry_description)
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClickLabel = label, onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(Res.drawable.ic_notes),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
         )
-    } else {
-        TextButton(onClick = onExpand, modifier = modifier.fillMaxWidth()) {
-            Icon(painterResource(Res.drawable.ic_notes), contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(Res.string.quick_entry_add_description))
-        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.testTag(UiTestTags.DESCRIPTION),
+        )
     }
+}
+
+/**
+ * Description editor opened from the keypad. The field takes focus as soon as the dialog window
+ * does, so the system keyboard is up without another tap.
+ */
+@Composable
+private fun DescriptionDialog(
+    initialText: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+) {
+    var value by rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue(initialText, selection = TextRange(initialText.length)))
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.quick_entry_description)) },
+        text = {
+            val focusRequester = remember { FocusRequester() }
+            val windowInfo = LocalWindowInfo.current
+            LaunchedEffect(focusRequester) {
+                // Focus requested before the dialog window is focused does not bring up the keyboard.
+                snapshotFlow { windowInfo.isWindowFocused }.first { it }
+                focusRequester.requestFocus()
+            }
+            OutlinedTextField(
+                value = value,
+                onValueChange = { value = it },
+                placeholder = { Text(stringResource(Res.string.quick_entry_add_description)) },
+                singleLine = true,
+                keyboardOptions =
+                    KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onSave(value.text) }),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
+                        .testTag(UiTestTags.DESCRIPTION_FIELD),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(value.text) }, modifier = Modifier.testTag(UiTestTags.DESCRIPTION_SAVE)) {
+                Text(stringResource(Res.string.dialog_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.dialog_cancel)) }
+        },
+    )
 }

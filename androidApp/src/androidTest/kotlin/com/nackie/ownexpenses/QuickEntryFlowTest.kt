@@ -4,10 +4,14 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.nackie.ownexpenses.domain.model.AmountOperator
 import com.nackie.ownexpenses.ui.UiTestTags
@@ -69,6 +73,29 @@ class QuickEntryFlowTest {
         compose.onNodeWithTag(UiTestTags.operatorKey(AmountOperator.DIVIDE.name)).performClick()
         compose.onNodeWithTag(UiTestTags.digitKey(0)).performClick()
         compose.onNodeWithTag(UiTestTags.ADD_BUTTON).assertIsNotEnabled()
+    }
+
+    @Test
+    fun descriptionDialogIsFocusedAndShowsTextInTheSheet() {
+        compose.waitUntil(TIMEOUT_MILLIS) {
+            compose.onAllNodesWithTag(UiTestTags.CATEGORY_TILE).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onAllNodesWithTag(UiTestTags.CATEGORY_TILE)[0].performClick()
+        compose.onNodeWithTag(UiTestTags.DESCRIPTION).assertDoesNotExist()
+
+        compose.onNodeWithTag(UiTestTags.DESCRIPTION_KEY).performClick()
+        // Typing needs no extra tap on the field.
+        compose.waitUntil(TIMEOUT_MILLIS) {
+            compose
+                .onAllNodes(hasTestTag(UiTestTags.DESCRIPTION_FIELD) and isFocused())
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
+        compose.onNodeWithTag(UiTestTags.DESCRIPTION_FIELD).performTextInput("Lunch")
+        compose.onNodeWithTag(UiTestTags.DESCRIPTION_SAVE).performClick()
+
+        compose.onNodeWithTag(UiTestTags.DESCRIPTION_FIELD).assertDoesNotExist()
+        compose.onNodeWithTag(UiTestTags.DESCRIPTION).assertTextEquals("Lunch")
     }
 
     private fun balanceText(): String =
