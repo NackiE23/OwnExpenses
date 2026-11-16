@@ -78,8 +78,19 @@ jobs:
       - name: Unit tests
         run: ./gradlew :shared:jvmTest :shared:testAndroidHostTest
 
+      # Address of the OwnBudget server for the one-way sync: a repository variable (not a secret, it
+      # ends up in the APK anyway). Without it the APK has no sync; see docs/RELEASE.md.
       - name: Build signed APK
-        run: ./gradlew :androidApp:assembleRelease
+        env:
+          OWNEXPENSES_SYNC_URL: ${{ vars.OWNEXPENSES_SYNC_URL }}
+        run: |
+          if [ -z "$OWNEXPENSES_SYNC_URL" ]; then
+            echo "::warning::Repository variable OWNEXPENSES_SYNC_URL is not set: this APK has no sync"
+          elif [[ "$OWNEXPENSES_SYNC_URL" == http://* ]]; then
+            echo "::error::OWNEXPENSES_SYNC_URL must use https: release builds refuse plain HTTP"
+            exit 1
+          fi
+          ./gradlew :androidApp:assembleRelease
 
       - name: Verify the signature
         run: |

@@ -90,6 +90,41 @@ class BackupServiceTest {
         }
 
     @Test
+    fun restoreKeepsSyncIdsAndTellsTheServerWhatIsGone() =
+        runTest {
+            fillSource()
+            val file = BackupService(source, sourceSettings, clock).createBackup()
+            val other = target.insertCategory("Other", TransactionType.EXPENSE)
+            val targetTransactions = RoomTransactionRepository(target, clock)
+            val replaced = targetTransactions.addTransaction(TransactionInput(other, 1_00, LocalDate(2026, 10, 3)))
+            val replacedSyncId = target.transactionDao().getById(replaced)!!.syncId
+
+            val service = BackupService(target, targetSettings, clock)
+            service.restore(assertIs<BackupReadResult.Valid>(service.read(file.content)).backup)
+
+            assertEquals(
+                source.transactionDao().getAll().map { it.syncId },
+                target.transactionDao().getAll().map { it.syncId },
+            )
+            assertTrue(target.transactionDao().getAll().all { it.syncPending })
+            assertEquals(listOf(replacedSyncId), target.syncDao().getDeletions(10).map { it.syncId })
+        }
+
+    @Test
+    fun backupsWithoutSyncIdsGetNewOnes() {
+        val category = """{"id":1,"name":"Cafe","type":"expense","color":"#FF123456","icon":"cafe","sortOrder":0}"""
+        val record =
+            """{"id":1,"type":"expense","amountMinor":100,"categoryId":1,""" +
+                """"date":"2026-10-03","createdAt":0,"updatedAt":0}"""
+        val content = document(categories = category, transactions = record)
+
+        val backup = assertIs<BackupReadResult.Valid>(BackupService(target, targetSettings, clock).read(content))
+        val ids = backup.backup.categories.map { it.syncId } + backup.backup.transactions.map { it.syncId }
+
+        assertEquals(2, ids.toSet().size)
+    }
+
+    @Test
     fun archivedCategoriesSurvive() =
         runTest {
             fillSource()

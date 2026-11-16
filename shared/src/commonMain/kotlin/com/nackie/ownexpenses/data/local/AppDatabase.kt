@@ -7,8 +7,10 @@ import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.nackie.ownexpenses.data.local.dao.CategoryDao
+import com.nackie.ownexpenses.data.local.dao.SyncDao
 import com.nackie.ownexpenses.data.local.dao.TransactionDao
 import com.nackie.ownexpenses.data.local.entity.CategoryEntity
+import com.nackie.ownexpenses.data.local.entity.SyncDeletionEntity
 import com.nackie.ownexpenses.data.local.entity.TransactionEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -18,8 +20,8 @@ import kotlinx.coroutines.IO
  * Exported schemas live in `shared/schemas`.
  */
 @Database(
-    entities = [CategoryEntity::class, TransactionEntity::class],
-    version = 2,
+    entities = [CategoryEntity::class, TransactionEntity::class, SyncDeletionEntity::class],
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -28,6 +30,8 @@ abstract class AppDatabase : RoomDatabase() {
     internal abstract fun categoryDao(): CategoryDao
 
     internal abstract fun transactionDao(): TransactionDao
+
+    internal abstract fun syncDao(): SyncDao
 }
 
 // Room generates the actual implementations.

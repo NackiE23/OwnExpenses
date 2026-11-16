@@ -19,6 +19,16 @@ val keystoreProperties =
         if (file.exists()) file.inputStream().use { load(it) }
     }
 
+// OwnBudget server for the one-way sync (docs/RELEASE.md). From the environment, e.g. a GitHub
+// repository variable in the release workflow, or `ownexpenses.syncUrl` in ~/.gradle/gradle.properties
+// for local builds. Empty means a build without sync: the settings hide it and nothing is sent.
+val syncServerUrl: String =
+    providers
+        .environmentVariable("OWNEXPENSES_SYNC_URL")
+        .orElse(providers.gradleProperty("ownexpenses.syncUrl"))
+        .getOrElse("")
+        .trim()
+
 android {
     namespace = "com.nackie.ownexpenses"
     compileSdk =
@@ -38,10 +48,11 @@ android {
                 .get()
                 .toInt()
         // Every release needs a higher versionCode, or Android refuses to install it over the old one.
-        versionCode = 6
-        versionName = "1.3.2"
+        versionCode = 7
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "SYNC_SERVER_URL", "\"${syncServerUrl.replace("\"", "")}\"")
     }
     signingConfigs {
         if (!keystoreProperties.isEmpty) {
@@ -73,6 +84,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {
@@ -93,6 +105,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
+    implementation(libs.androidx.work.runtime)
 
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)

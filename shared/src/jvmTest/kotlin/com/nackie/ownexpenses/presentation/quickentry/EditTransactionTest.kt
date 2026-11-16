@@ -179,6 +179,9 @@ internal class EditTransactionTest : MainDispatcherTest() {
                 var balance = awaitItem()
                 while (balance != -89_00L) balance = awaitItem()
             }
-            assertEquals(original, transactions.getTransaction(id))
+            // The same record; only its change time moves on, so the sync server sees it as newer.
+            val restored = assertNotNull(transactions.getTransaction(id))
+            assertEquals(original.copy(updatedAt = restored.updatedAt), restored)
+            assertTrue(restored.updatedAt > original.updatedAt)
         }
 }

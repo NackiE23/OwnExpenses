@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug only: lets the app reach `manage.py runserver` on the computer over HTTP
+    (127.0.0.1 with `adb reverse tcp:8000 tcp:8000`, or the computer's LAN address). Release builds keep
+    the default, which allows HTTPS only.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

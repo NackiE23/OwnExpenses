@@ -37,6 +37,8 @@ Workflow `.github/workflows/release.yml` сам збирає підписани�
 
 Значення секретів після збереження не видно нікому, навіть власнику; workflow отримує їх лише під час збірки.
 
+**Один раз: адреса сервера синхронізації.** GitHub → Settings → Secrets and variables → Actions → вкладка **Variables** → New repository variable: `OWNEXPENSES_SYNC_URL` = адреса сервера OwnBudget, лише корінь сайту без `/api/...`: для PythonAnywhere це `https://<логін>.pythonanywhere.com`. Це змінна, а не секрет: адреса потрапляє в APK, а токен пристрою туди не потрапляє ніколи, його вставляють у самому застосунку. Без змінної workflow попереджає, і APK виходить без синхронізації; адреса з `http://` зупиняє збірку, бо release-збірка ходить лише через HTTPS.
+
 **Кожен реліз:**
 
 1. Підніміть `versionCode` на 1 і `versionName` в `androidApp/build.gradle.kts`, закомітьте й запуште в master.
@@ -50,13 +52,20 @@ Workflow зупиняється з помилкою, якщо тег не збі
 ## Збірка релізу локально (запасний спосіб)
 
 1. Підніміть `versionCode` на 1 і за потреби `versionName` в `androidApp/build.gradle.kts`.
-2. Зберіть (у PowerShell спершу `$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"`):
+2. Задайте адресу сервера синхронізації: змінна середовища `OWNEXPENSES_SYNC_URL` (у PowerShell `$env:OWNEXPENSES_SYNC_URL = "https://budget.example.com"`) або рядок `ownexpenses.syncUrl=https://budget.example.com` у `~/.gradle/gradle.properties` (на Windows `C:\Users\<ім'я>\.gradle\gradle.properties`: це файл користувача, не проєкту, тож адреса не потрапляє в git; Android Studio його теж читає, після зміни зробіть Gradle Sync). Змінна середовища має перевагу над рядком у файлі. Без жодної збірка виходить без синхронізації. Debug-збірка дозволяє й HTTP, тож для локального сервера підходить `http://127.0.0.1:8000` разом з `adb reverse tcp:8000 tcp:8000` (емулятор чи телефон по USB; `10.0.2.2` не годиться: на емуляторах із віртуальним Wi-Fi застосунок туди не достукується) або `http://<IP комп'ютера>:8000` (телефон у тій самій мережі; сервер тоді запускайте як `runserver 0.0.0.0:8000` і додайте IP у `DJANGO_ALLOWED_HOSTS`).
+3. Зберіть (у PowerShell спершу `$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"`):
 
    ```bash
    ./gradlew :androidApp:assembleRelease
    ```
 
-3. Готовий файл: `androidApp/build/outputs/apk/release/androidApp-release.apk`.
+4. Готовий файл: `androidApp/build/outputs/apk/release/androidApp-release.apk`.
+
+## Підключення телефона до OwnBudget
+
+1. В адмінці OwnBudget: «OwnExpenses → Пристрої → Додати», назва телефона. Сторінка один раз покаже токен.
+2. У застосунку: «Більше» → «Синхронізація з сервером» → «Токен пристрою», вставити токен. Після збереження застосунок одразу надсилає всі записи. «Перевірити з'єднання» перевіряє адресу й токен, нічого не надсилаючи.
+3. Загублений токен або новий телефон із відновленою резервною копією: дія «Новий токен» у тому самому пристрої в адмінці, а не новий пристрій. Сервер упізнає записи за UUID і не прийме UUID, які вже належать іншому пристрою (у застосунку це «Сервер відхилив дані» з поясненням).
 
 ## Встановлення на телефон
 

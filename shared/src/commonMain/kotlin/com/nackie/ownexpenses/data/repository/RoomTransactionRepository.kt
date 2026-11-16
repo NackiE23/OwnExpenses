@@ -4,6 +4,7 @@ import androidx.room.immediateTransaction
 import androidx.room.useWriterConnection
 import com.nackie.ownexpenses.data.local.AppDatabase
 import com.nackie.ownexpenses.data.local.entity.CategoryEntity
+import com.nackie.ownexpenses.data.local.entity.SyncDeletionEntity
 import com.nackie.ownexpenses.data.local.entity.TransactionEntity
 import com.nackie.ownexpenses.data.local.toDomain
 import com.nackie.ownexpenses.data.local.toEntity
@@ -26,6 +27,7 @@ internal class RoomTransactionRepository(
 ) : TransactionRepository {
     private val dao = database.transactionDao()
     private val categoryDao = database.categoryDao()
+    private val syncDao = database.syncDao()
 
     override fun observeBalance(asOf: LocalDate): Flow<Long> = dao.observeBalance(asOf).distinctUntilChanged()
 
@@ -109,7 +111,8 @@ internal class RoomTransactionRepository(
                         categoryId = category.id,
                         date = input.date,
                         description = input.description.normalizeDescription(),
-                        updatedAt = clock.now().toEpochMilliseconds(),
+                        updatedAt = nextVersion(existing.updatedAt),
+                        syncPending = true,
                     ),
                 )
             }
@@ -119,13 +122,35 @@ internal class RoomTransactionRepository(
     override suspend fun deleteTransaction(id: Long): Transaction? =
         database.useWriterConnection { connection ->
             connection.immediateTransaction {
-                dao.getById(id)?.also { dao.delete(id) }?.toDomain()
+                val existing = dao.getById(id) ?: return@immediateTransaction null
+                dao.delete(id)
+                // Tombstone for the sync server, written atomically with the delete. Newer than the
+                // record itself, or the server would take the deletion for an outdated one.
+                syncDao.insertDeletion(SyncDeletionEntity(existing.syncId, nextVersion(existing.updatedAt)))
+                existing.toDomain()
             }
         }
 
     override suspend fun restoreTransaction(transaction: Transaction) {
-        dao.insert(transaction.toEntity())
+        database.useWriterConnection { connection ->
+            connection.immediateTransaction {
+                val entity = transaction.toEntity()
+                val deletedAt = syncDao.getDeletedAt(entity.syncId)
+                syncDao.deleteDeletion(entity.syncId)
+                // Always newer than both the record and its deletion: the deletion may already be on the
+                // server, even if its tombstone is still here (the batch is on the way right now).
+                val updatedAt = nextVersion(maxOf(entity.updatedAt, deletedAt ?: 0L))
+                dao.insert(entity.copy(updatedAt = updatedAt, syncPending = true))
+            }
+        }
     }
+
+    /**
+     * Change time for a record last changed at [previous]: now, but always later than [previous]. The
+     * sync server keeps the version with the latest time, so a phone clock set back must not make a
+     * fresh edit look older than the one already sent, and two edits never share a time.
+     */
+    private fun nextVersion(previous: Long): Long = maxOf(clock.now().toEpochMilliseconds(), previous + 1)
 
     private suspend fun requireCategory(id: Long): CategoryEntity =
         requireNotNull(categoryDao.getById(id)) { "Category $id not found" }

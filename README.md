@@ -1,6 +1,6 @@
 # OwnExpenses
 
-Personal offline expense tracker for Android: record an expense in 2–3 taps and always see the balance. Local database only, no accounts, no network. iOS comes later from the same Kotlin Multiplatform codebase.
+Personal offline-first expense tracker for Android: record an expense in 2–3 taps and always see the balance. Local database, no accounts; optional one-way sync to your own OwnBudget server (the only network use). iOS comes later from the same Kotlin Multiplatform codebase.
 
 Requirements and decisions: [docs/TZ.md](docs/TZ.md) (Ukrainian).
 
@@ -16,7 +16,7 @@ Dependency direction: `androidApp → sharedUi → shared`.
 
 ## Stack
 
-Kotlin Multiplatform, Compose Multiplatform, Room (KMP, bundled SQLite), DataStore, Koin, Navigation Compose, kotlinx-datetime. Versions live in [gradle/libs.versions.toml](gradle/libs.versions.toml).
+Kotlin Multiplatform, Compose Multiplatform, Room (KMP, bundled SQLite), DataStore, Koin, Navigation Compose, kotlinx-datetime, Ktor client and WorkManager (sync). Versions live in [gradle/libs.versions.toml](gradle/libs.versions.toml).
 
 ## Commands
 
