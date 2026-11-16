@@ -17,6 +17,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 
 class TransactionRepositoryTest {
@@ -162,16 +164,25 @@ class TransactionRepositoryTest {
         }
 
     @Test
-    fun restoreKeepsIdAndTimestamps() =
+    fun restoreKeepsIdAndCreationTimeAndIsNewerThanTheDeletion() =
         runTest {
             val id = add(cafe, 89_00, OCT_1, description = "Mac")
             val original = assertNotNull(repository.getTransaction(id))
 
             repository.deleteTransaction(id)
             assertNull(repository.getTransaction(id))
+            val deletedAt =
+                database
+                    .syncDao()
+                    .getDeletions(10)
+                    .single()
+                    .deletedAt
             repository.restoreTransaction(original)
 
-            assertEquals(original, repository.getTransaction(id))
+            val restored = assertNotNull(repository.getTransaction(id))
+            assertEquals(original.copy(updatedAt = restored.updatedAt), restored)
+            assertTrue(restored.updatedAt.toEpochMilliseconds() > deletedAt)
+            assertTrue(database.syncDao().getDeletions(10).isEmpty())
         }
 
     @Test
@@ -180,7 +191,8 @@ class TransactionRepositoryTest {
             val id = add(cafe, 89_00, OCT_1)
             val original = assertNotNull(repository.deleteTransaction(id))
             // The sync sent the tombstone in the meantime.
-            database.syncDao().deleteSentDeletion(original.syncId, clock.now.toEpochMilliseconds())
+            val deletion = database.syncDao().getDeletions(10).single()
+            database.syncDao().deleteSentDeletion(deletion.syncId, deletion.deletedAt)
 
             clock.now = Instant.parse("2026-10-25T08:00:00Z")
             repository.restoreTransaction(original)
@@ -203,6 +215,31 @@ class TransactionRepositoryTest {
 
             repository.deleteTransaction(id)
             assertEquals(listOf(syncId), database.syncDao().getDeletions(10).map { it.syncId })
+        }
+
+    @Test
+    fun phoneClockSetBackStillMakesEveryChangeNewer() =
+        runTest {
+            val id = add(cafe, 89_00, OCT_1)
+            val created = assertNotNull(repository.getTransaction(id)).updatedAt
+
+            clock.now = created - 1.hours
+            repository.updateTransaction(id, TransactionInput(cafe, 99_00, OCT_1))
+            val edited = assertNotNull(repository.getTransaction(id)).updatedAt
+            assertTrue(edited > created)
+
+            // Two edits within the same millisecond still get different times.
+            repository.updateTransaction(id, TransactionInput(cafe, 98_00, OCT_1))
+            assertTrue(assertNotNull(repository.getTransaction(id)).updatedAt > edited)
+
+            val deleted = assertNotNull(repository.deleteTransaction(id))
+            assertTrue(
+                database
+                    .syncDao()
+                    .getDeletions(10)
+                    .single()
+                    .deletedAt > deleted.updatedAt.toEpochMilliseconds(),
+            )
         }
 
     @Test

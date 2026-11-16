@@ -79,6 +79,14 @@ internal interface SyncDao {
     )
     fun observePendingCount(): Flow<Int>
 
+    @Query(
+        """
+        SELECT EXISTS(SELECT 1 FROM transactions WHERE sync_pending = 1)
+            OR EXISTS(SELECT 1 FROM sync_deletions)
+        """,
+    )
+    suspend fun hasPending(): Boolean
+
     /**
      * Emits after every write to the tables a sync reads, categories included (they are always sent
      * in full, so any change to them is a reason to sync). The value itself means nothing: Room
@@ -112,9 +120,12 @@ internal interface SyncDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDeletions(deletions: List<SyncDeletionEntity>)
 
-    /** Returns how many tombstones were removed: 0 if the server has already received this deletion. */
+    /** When the record was deleted, if the tombstone is still here (null once the server has accepted it). */
+    @Query("SELECT deleted_at FROM sync_deletions WHERE sync_id = :syncId")
+    suspend fun getDeletedAt(syncId: String): Long?
+
     @Query("DELETE FROM sync_deletions WHERE sync_id = :syncId")
-    suspend fun deleteDeletion(syncId: String): Int
+    suspend fun deleteDeletion(syncId: String)
 
     @Query("SELECT sync_id FROM transactions")
     suspend fun getTransactionSyncIds(): List<String>

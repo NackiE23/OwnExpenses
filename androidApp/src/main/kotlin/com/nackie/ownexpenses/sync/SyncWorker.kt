@@ -17,6 +17,7 @@ class SyncWorker(
     override suspend fun doWork(): Result =
         when (val outcome = syncService.sync()) {
             SyncOutcome.NotConfigured, is SyncOutcome.Success -> Result.success()
+
             // A wrong token or refused data will not fix itself; the settings screen shows the error.
             is SyncOutcome.Failed -> if (outcome.error.isRetryable) Result.retry() else Result.success()
         }

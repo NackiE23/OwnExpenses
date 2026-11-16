@@ -40,7 +40,7 @@ internal data class SyncState(
     val token: String? = null,
     val lastSuccessAt: Instant? = null,
     val lastError: SyncError? = null,
-    /** Server's explanation for [SyncError.REJECTED], shortened. */
+    /** Server's explanation for [SyncError.REJECTED], or what failed for [SyncError.NO_CONNECTION]; shortened. */
     val lastErrorMessage: String? = null,
 )
 

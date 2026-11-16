@@ -57,11 +57,23 @@ internal data class SyncDeletionDto(
     @SerialName("deleted_at") val deletedAt: Long,
 )
 
+/*
+ * The server refuses a whole batch for one field over its limits, and the same batch would be refused
+ * again on every run. Names and descriptions from imports or old backups are not bound by the input
+ * limits of the screens, so they are fitted to the server's limits here: the server only displays them.
+ */
+private const val MAX_NAME_LENGTH = 100
+private const val MAX_DESCRIPTION_LENGTH = 500
+private const val UNNAMED = "—"
+
+/** Without NUL (the server refuses it), trimmed like the server does, at most [maxLength] characters. */
+private fun String.forServer(maxLength: Int): String = replace("\u0000", "").trim().take(maxLength).trimEnd()
+
 internal fun SyncCategory.toDto() =
     SyncCategoryDto(
         id = syncId,
         parentId = parentSyncId,
-        name = name,
+        name = name.forServer(MAX_NAME_LENGTH).ifEmpty { UNNAMED },
         type = Converters.transactionTypeToKey(type),
         archived = isArchived,
         sortOrder = sortOrder,
@@ -74,7 +86,7 @@ internal fun PendingTransaction.toDto() =
         amountMinor = amountMinor,
         categoryId = categorySyncId,
         date = date.toString(),
-        description = description,
+        description = description?.forServer(MAX_DESCRIPTION_LENGTH),
         createdAt = createdAt,
         updatedAt = updatedAt,
     )

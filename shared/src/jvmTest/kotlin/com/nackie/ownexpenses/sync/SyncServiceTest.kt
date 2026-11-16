@@ -24,12 +24,14 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
 import okio.Path.Companion.toOkioPath
 import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -47,6 +49,9 @@ class SyncServiceTest {
 
     /** What the fake server does with the n-th request (1-based). */
     private var server: suspend (Int) -> HttpStatusCode = { HttpStatusCode.OK }
+
+    /** Body of every answer. */
+    private var responseBody = "{}"
 
     private var food = 0L
     private var cafe = 0L
@@ -75,7 +80,7 @@ class SyncServiceTest {
                     sent += Json.parseToJsonElement(request.body.toByteArray().decodeToString()).jsonObject
                 }
                 val status = server(sent.size)
-                respond("{}", status)
+                respond(responseBody, status)
             }
         val dataStore =
             PreferenceDataStoreFactory.createWithPath(scope = backgroundScope) {
@@ -119,7 +124,7 @@ class SyncServiceTest {
             assertEquals(SyncOutcome.Success(2), service.sync())
 
             val body = sent.single()
-            assertEquals(listOf("Bearer secret-token"), authorization)
+            assertEquals<List<String?>>(listOf("Bearer secret-token"), authorization)
             assertEquals("1.4.0", body["app_version"]?.jsonPrimitive?.content)
             val categories = body.getValue("categories").jsonArray.map { it.jsonObject }
             assertEquals(listOf("Food", "Salary", "Cafe"), categories.map { it.getValue("name").jsonPrimitive.content })
@@ -127,7 +132,10 @@ class SyncServiceTest {
             assertEquals(foodId, categories[2].getValue("parent_id").jsonPrimitive.content)
 
             val operations = body.getValue("operations").jsonArray.map { it.jsonObject }
-            assertEquals(listOf("8500", "3000000"), operations.map { it.getValue("amount_minor").jsonPrimitive.content })
+            assertEquals(
+                listOf("8500", "3000000"),
+                operations.map { it.getValue("amount_minor").jsonPrimitive.content },
+            )
             assertEquals(categories[2].getValue("id"), operations[0].getValue("category_id"))
             assertEquals("2026-11-14", operations[0].getValue("date").jsonPrimitive.content)
             assertEquals(0, pending(service))
@@ -156,7 +164,12 @@ class SyncServiceTest {
 
             // The loop sent the newer version in a second batch.
             assertEquals(2, sent.size)
-            val second = sent[1].getValue("operations").jsonArray.single().jsonObject
+            val second =
+                sent[1]
+                    .getValue("operations")
+                    .jsonArray
+                    .single()
+                    .jsonObject
             assertEquals("9000", second.getValue("amount_minor").jsonPrimitive.content)
             assertEquals(0, pending(service))
         }
@@ -172,7 +185,13 @@ class SyncServiceTest {
 
             val deleted = transactions.deleteTransaction(removed)!!
             service.sync()
-            val deletion = sent.last().getValue("deleted_operations").jsonArray.single().jsonObject
+            val deletion =
+                sent
+                    .last()
+                    .getValue("deleted_operations")
+                    .jsonArray
+                    .single()
+                    .jsonObject
             assertEquals(deleted.syncId, deletion.getValue("id").jsonPrimitive.content)
             assertEquals(0, pending(service))
 
@@ -182,7 +201,13 @@ class SyncServiceTest {
             val requests = sent.size
             service.sync()
             assertEquals(requests + 1, sent.size)
-            assertEquals(0, sent.last().getValue("deleted_operations").jsonArray.size)
+            assertEquals(
+                0,
+                sent
+                    .last()
+                    .getValue("deleted_operations")
+                    .jsonArray.size,
+            )
         }
 
     @Test
@@ -233,7 +258,12 @@ class SyncServiceTest {
 
             assertEquals(2, sent.size)
             val categories = sent[1].getValue("categories").jsonArray
-            val names = categories.map { it.jsonObject.getValue("name").jsonPrimitive.content }
+            val names =
+                categories.map {
+                    it.jsonObject
+                        .getValue("name")
+                        .jsonPrimitive.content
+                }
             assertEquals(listOf("Food", "Allowance", "Cafe"), names)
             assertEquals(0, sent[1].getValue("operations").jsonArray.size)
         }
@@ -251,7 +281,130 @@ class SyncServiceTest {
 
             assertEquals(2, pending(service))
             assertIs<SyncOutcome.Success>(service.sync())
-            assertEquals(2, sent.last().getValue("operations").jsonArray.size)
+            assertEquals(
+                2,
+                sent
+                    .last()
+                    .getValue("operations")
+                    .jsonArray.size,
+            )
+        }
+
+    @Test
+    fun undoWhileTheDeletionIsOnTheWayBringsTheRecordBackOnTheServer() =
+        runTest {
+            val service = createService()
+            service.setToken("token")
+            val id = add(cafe, 85_00)
+            service.sync()
+            val deleted = transactions.deleteTransaction(id)!!
+            server = { number ->
+                // The server is applying the deletion right now, and the user taps "Undo".
+                if (number == 2) transactions.restoreTransaction(deleted)
+                HttpStatusCode.OK
+            }
+
+            service.sync()
+
+            assertEquals(3, sent.size)
+            val deletion =
+                sent[1]
+                    .getValue("deleted_operations")
+                    .jsonArray
+                    .single()
+                    .jsonObject
+            val revived =
+                sent[2]
+                    .getValue("operations")
+                    .jsonArray
+                    .single()
+                    .jsonObject
+            assertEquals(deletion.getValue("id"), revived.getValue("id"))
+            // The server keeps the newer of the two, so the record must be newer than its deletion.
+            val deletedAt = deletion.getValue("deleted_at").jsonPrimitive.long
+            assertTrue(revived.getValue("updated_at").jsonPrimitive.long > deletedAt)
+            assertEquals(0, pending(service))
+        }
+
+    @Test
+    fun fieldsOverTheServerLimitsAreFittedInsteadOfBlockingTheSync() =
+        runTest {
+            val service = createService()
+            service.setToken("token")
+            val category = database.categoryDao().getById(salary)!!
+            database.categoryDao().update(category.copy(name = "S".repeat(150)))
+            transactions.addTransaction(
+                TransactionInput(cafe, 85_00, LocalDate(2026, 11, 14), "  " + "d".repeat(700)),
+            )
+
+            service.sync()
+
+            val body = sent.single()
+            val names =
+                body
+                    .getValue(
+                        "categories",
+                    ).jsonArray
+                    .map {
+                        it.jsonObject
+                            .getValue("name")
+                            .jsonPrimitive.content
+                    }
+            assertEquals(100, names[1].length)
+            val operation =
+                body
+                    .getValue("operations")
+                    .jsonArray
+                    .single()
+                    .jsonObject
+            assertEquals("d".repeat(500), operation.getValue("description").jsonPrimitive.content)
+        }
+
+    @Test
+    fun changesToSendAreKnownWithoutARequest() =
+        runTest {
+            val service = createService()
+            add(cafe, 85_00)
+            assertFalse(service.hasChangesToSend(), "no token yet")
+
+            service.setToken("token")
+            assertTrue(service.hasChangesToSend())
+            service.sync()
+            assertFalse(service.hasChangesToSend())
+
+            val category = database.categoryDao().getById(salary)!!
+            database.categoryDao().update(category.copy(sortOrder = 7))
+            assertTrue(service.hasChangesToSend())
+            service.sync()
+            assertFalse(service.hasChangesToSend())
+            assertEquals(2, sent.size)
+        }
+
+    @Test
+    fun refusalKeepsTheServersReason() =
+        runTest {
+            val service = createService()
+            service.setToken("token")
+            add(cafe, 85_00)
+
+            server = { HttpStatusCode.Conflict }
+            responseBody = """{"detail": "UUID already belongs to another device"}"""
+            assertEquals(SyncOutcome.Failed(SyncError.REJECTED), service.sync())
+            assertEquals("UUID already belongs to another device", service.status.first().lastErrorMessage)
+
+            // An error page of a broken server is not worth showing.
+            server = { HttpStatusCode.BadGateway }
+            responseBody = "<html>502</html>"
+            assertEquals(SyncOutcome.Failed(SyncError.SERVER), service.sync())
+            assertNull(service.status.first().lastErrorMessage)
+
+            // No answer: the cause tells a wrong address from being offline.
+            server = { error("failed to connect to budget.example.com") }
+            assertEquals(SyncOutcome.Failed(SyncError.NO_CONNECTION), service.sync())
+            assertEquals(
+                "IllegalStateException: failed to connect to budget.example.com",
+                service.status.first().lastErrorMessage,
+            )
         }
 
     @Test

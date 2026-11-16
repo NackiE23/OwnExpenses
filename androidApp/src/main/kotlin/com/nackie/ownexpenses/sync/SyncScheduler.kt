@@ -28,10 +28,11 @@ class SyncScheduler(
     @OptIn(FlowPreview::class)
     fun start(scope: CoroutineScope) {
         // Every change restarts the countdown, so a burst of edits becomes one sync. The first value
-        // (app start) also schedules one, which sends whatever was left over from last time.
+        // (app start) also schedules one if something was left over from last time. The sync's own
+        // bookkeeping (clearing the pending flags) is a change too, but leaves nothing to send.
         syncService.changes
             .debounce(DEBOUNCE_MILLIS)
-            .onEach { if (syncService.isReady()) enqueueSoon() }
+            .onEach { if (syncService.hasChangesToSend()) enqueueSoon() }
             .launchIn(scope)
 
         val periodic =
@@ -49,8 +50,13 @@ class SyncScheduler(
                 .setConstraints(networkConstraint)
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
                 .build()
-        // Replacing a waiting request keeps a single one queued however long the phone is offline.
-        WorkManager.getInstance(context).enqueueUniqueWork(ONE_TIME_WORK, ExistingWorkPolicy.REPLACE, request)
+        // Replaced, not appended: an appended run would wait behind one that is backing off after a
+        // failure, for minutes. Replacing keeps a single run queued and tries a fresh change right away.
+        // If it cuts off a run that is sending, nothing is lost: a batch is acknowledged in one
+        // transaction only after the server's answer, and the server recognises records it already has.
+        WorkManager
+            .getInstance(context)
+            .enqueueUniqueWork(ONE_TIME_WORK, ExistingWorkPolicy.REPLACE, request)
     }
 
     private companion object {

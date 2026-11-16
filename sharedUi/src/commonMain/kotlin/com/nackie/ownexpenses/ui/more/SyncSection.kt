@@ -107,7 +107,8 @@ private fun SyncStatusText(
             Text(stringResource(Res.string.sync_status_pending, status.pendingCount.toString()))
         }
         status.lastError?.let { error ->
-            val details = status.lastErrorMessage?.takeIf { error == SyncError.REJECTED }
+            val details =
+                status.lastErrorMessage?.takeIf { error == SyncError.REJECTED || error == SyncError.NO_CONNECTION }
             Text(
                 text = listOfNotNull(stringResource(error.message), details).joinToString(": "),
                 color = MaterialTheme.colorScheme.error,

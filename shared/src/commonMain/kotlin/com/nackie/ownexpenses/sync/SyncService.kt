@@ -14,6 +14,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -96,6 +102,13 @@ class SyncService internal constructor(
 
     suspend fun isReady(): Boolean = config.isAvailable && stateStore.token() != null
 
+    /**
+     * Whether a sync would send anything: waiting records or deletions, or categories that differ from
+     * what the server last received. Lets the platform skip waking up a background job for nothing.
+     */
+    suspend fun hasChangesToSend(): Boolean =
+        isReady() && (syncDao.hasPending() || syncDao.getCategories().fingerprint() != stateStore.sentCategories())
+
     suspend fun setToken(token: String?) {
         mutex.withLock {
             stateStore.setToken(token)
@@ -107,9 +120,11 @@ class SyncService internal constructor(
     suspend fun checkConnection(): SyncOutcome {
         val token = stateStore.token()
         if (!config.isAvailable || token == null) return SyncOutcome.NotConfigured
-        return when (val result = api.ping(config.serverUrl, token)) {
-            is ApiResult.Response -> if (result.isSuccess) SyncOutcome.Success(0) else SyncOutcome.Failed(result.error())
-            is ApiResult.NoConnection -> SyncOutcome.Failed(SyncError.NO_CONNECTION)
+        val result = api.ping(config.serverUrl, token)
+        return when {
+            result is ApiResult.NoConnection -> SyncOutcome.Failed(SyncError.NO_CONNECTION)
+            result is ApiResult.Response && !result.isSuccess -> SyncOutcome.Failed(result.error())
+            else -> SyncOutcome.Success(sent = 0)
         }
     }
 
@@ -171,8 +186,10 @@ class SyncService internal constructor(
         var result = api.send(config.serverUrl, token, request)
         if (result is ApiResult.NoConnection) result = api.send(config.serverUrl, token, request)
         return when (result) {
-            is ApiResult.NoConnection -> SyncError.NO_CONNECTION to null
-            is ApiResult.Response -> if (result.isSuccess) null else result.error() to result.body
+            // What failed (unknown host, TLS, timeout) is what tells a wrong address from being offline.
+            is ApiResult.NoConnection -> SyncError.NO_CONNECTION to result.cause.describe()
+
+            is ApiResult.Response -> if (result.isSuccess) null else result.error().let { it to result.explanation(it) }
         }
     }
 
@@ -206,16 +223,40 @@ private fun ApiResult.Response.error(): SyncError =
         else -> SyncError.SERVER
     }
 
+/**
+ * The server's reason for refusing the data, for the settings screen: DRF's `detail` when there is
+ * one, else the raw validation errors. Other failures have no useful body (an HTML error page at best).
+ */
+private fun ApiResult.Response.explanation(error: SyncError): String? {
+    if (error != SyncError.REJECTED) return null
+    val detail =
+        try {
+            (Json.parseToJsonElement(body) as? JsonObject)?.get("detail")?.jsonPrimitive?.contentOrNull
+        } catch (e: SerializationException) {
+            null
+        } catch (e: IllegalArgumentException) {
+            null
+        }
+    return detail ?: body
+}
+
+/** `UnknownHostException: budget.example.com`, with the innermost cause, which names the real problem. */
+private fun Throwable.describe(): String {
+    var root = this
+    while (root.cause != null && root.cause !== root) root = root.cause!!
+    return listOfNotNull(root::class.simpleName, root.message).joinToString(": ")
+}
+
 private const val HTTP_UNAUTHORIZED = 401
 private const val HTTP_FORBIDDEN = 403
 private const val HTTP_TOO_MANY_REQUESTS = 429
 private val HTTP_CLIENT_ERRORS = 400..499
 
-/** Changes whenever anything the server stores about categories changes. */
-private fun List<SyncCategory>.fingerprint(): String {
-    val text =
-        joinToString("\n") {
-            "${it.syncId}|${it.parentSyncId}|${it.name}|${it.type}|${it.isArchived}|${it.sortOrder}"
-        }
-    return "$size:${text.hashCode()}"
-}
+/**
+ * Exactly what the server would get for categories. Kept whole rather than hashed: a hash collision
+ * would silently keep a category change from the server, and the list is small.
+ */
+private fun List<SyncCategory>.fingerprint(): String =
+    fingerprintJson.encodeToString(ListSerializer(SyncCategoryDto.serializer()), map { it.toDto() })
+
+private val fingerprintJson = Json { encodeDefaults = true }
