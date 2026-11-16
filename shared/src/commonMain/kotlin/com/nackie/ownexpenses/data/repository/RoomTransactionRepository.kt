@@ -4,6 +4,7 @@ import androidx.room.immediateTransaction
 import androidx.room.useWriterConnection
 import com.nackie.ownexpenses.data.local.AppDatabase
 import com.nackie.ownexpenses.data.local.entity.CategoryEntity
+import com.nackie.ownexpenses.data.local.entity.SyncDeletionEntity
 import com.nackie.ownexpenses.data.local.entity.TransactionEntity
 import com.nackie.ownexpenses.data.local.toDomain
 import com.nackie.ownexpenses.data.local.toEntity
@@ -26,6 +27,7 @@ internal class RoomTransactionRepository(
 ) : TransactionRepository {
     private val dao = database.transactionDao()
     private val categoryDao = database.categoryDao()
+    private val syncDao = database.syncDao()
 
     override fun observeBalance(asOf: LocalDate): Flow<Long> = dao.observeBalance(asOf).distinctUntilChanged()
 
@@ -110,6 +112,7 @@ internal class RoomTransactionRepository(
                         date = input.date,
                         description = input.description.normalizeDescription(),
                         updatedAt = clock.now().toEpochMilliseconds(),
+                        syncPending = true,
                     ),
                 )
             }
@@ -119,12 +122,24 @@ internal class RoomTransactionRepository(
     override suspend fun deleteTransaction(id: Long): Transaction? =
         database.useWriterConnection { connection ->
             connection.immediateTransaction {
-                dao.getById(id)?.also { dao.delete(id) }?.toDomain()
+                val existing = dao.getById(id) ?: return@immediateTransaction null
+                dao.delete(id)
+                // Tombstone for the sync server, written atomically with the delete.
+                syncDao.insertDeletion(SyncDeletionEntity(existing.syncId, clock.now().toEpochMilliseconds()))
+                existing.toDomain()
             }
         }
 
     override suspend fun restoreTransaction(transaction: Transaction) {
-        dao.insert(transaction.toEntity())
+        database.useWriterConnection { connection ->
+            connection.immediateTransaction {
+                val entity = transaction.toEntity()
+                val deletionWasUnsent = syncDao.deleteDeletion(entity.syncId) > 0
+                // If the server already got the deletion, the record must look newer than it to come back.
+                val updatedAt = if (deletionWasUnsent) entity.updatedAt else clock.now().toEpochMilliseconds()
+                dao.insert(entity.copy(updatedAt = updatedAt, syncPending = true))
+            }
+        }
     }
 
     private suspend fun requireCategory(id: Long): CategoryEntity =

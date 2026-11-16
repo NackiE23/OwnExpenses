@@ -36,6 +36,8 @@ internal data class BackupCategory(
     val icon: String,
     val sortOrder: Int,
     val archived: Boolean = false,
+    /** UUID on the sync server. Optional: backups made before sync have none and get a new one. */
+    val syncId: String? = null,
 )
 
 @Serializable
@@ -52,4 +54,6 @@ internal data class BackupTransaction(
     val createdAt: Long,
     /** Epoch milliseconds. */
     val updatedAt: Long,
+    /** UUID on the sync server. Optional: backups made before sync have none and get a new one. */
+    val syncId: String? = null,
 )

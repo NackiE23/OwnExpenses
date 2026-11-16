@@ -37,6 +37,8 @@ Workflow `.github/workflows/release.yml` сам збирає підписани�
 
 Значення секретів після збереження не видно нікому, навіть власнику; workflow отримує їх лише під час збірки.
 
+**Один раз: адреса сервера синхронізації.** GitHub → Settings → Secrets and variables → Actions → вкладка **Variables** → New repository variable: `OWNEXPENSES_SYNC_URL` = адреса сервера OwnBudget, наприклад `https://budget.example.com` (без `/api/...`). Це змінна, а не секрет: адреса потрапляє в APK, а токен пристрою туди не потрапляє ніколи, його вставляють у самому застосунку. Без змінної workflow попереджає, і APK виходить без синхронізації.
+
 **Кожен реліз:**
 
 1. Підніміть `versionCode` на 1 і `versionName` в `androidApp/build.gradle.kts`, закомітьте й запуште в master.
@@ -50,13 +52,14 @@ Workflow зупиняється з помилкою, якщо тег не збі
 ## Збірка релізу локально (запасний спосіб)
 
 1. Підніміть `versionCode` на 1 і за потреби `versionName` в `androidApp/build.gradle.kts`.
-2. Зберіть (у PowerShell спершу `$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"`):
+2. Задайте адресу сервера синхронізації: змінна середовища `OWNEXPENSES_SYNC_URL` (у PowerShell `$env:OWNEXPENSES_SYNC_URL = "https://budget.example.com"`) або рядок `ownexpenses.syncUrl=https://budget.example.com` у `~/.gradle/gradle.properties`. Без неї збірка виходить без синхронізації. Debug-збірка дозволяє й HTTP, тож для локального сервера підходить `http://10.0.2.2:8000` (емулятор) або `http://<IP комп'ютера>:8000` (телефон у тій самій мережі; сервер тоді запускайте як `runserver 0.0.0.0:8000` і додайте IP у `DJANGO_ALLOWED_HOSTS`).
+3. Зберіть (у PowerShell спершу `$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"`):
 
    ```bash
    ./gradlew :androidApp:assembleRelease
    ```
 
-3. Готовий файл: `androidApp/build/outputs/apk/release/androidApp-release.apk`.
+4. Готовий файл: `androidApp/build/outputs/apk/release/androidApp-release.apk`.
 
 ## Встановлення на телефон
 

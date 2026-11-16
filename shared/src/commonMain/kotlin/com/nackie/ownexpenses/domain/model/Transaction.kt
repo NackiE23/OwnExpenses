@@ -17,6 +17,8 @@ data class Transaction(
     val description: String?,
     val createdAt: Instant,
     val updatedAt: Instant,
+    /** Permanent id on the sync server. Empty only for values built outside the database (tests, previews). */
+    val syncId: String = "",
 ) {
     /** Contribution to the balance: positive for incomes, negative for expenses. */
     val signedAmountMinor: Long

@@ -1,0 +1,26 @@
+<resources>
+    <string name="sync_section">Синхронізація з сервером</string>
+    <string name="sync_server">Сервер: %1$s</string>
+    <string name="sync_token">Токен пристрою</string>
+    <string name="sync_token_set">Задано. Торкніться, щоб замінити чи видалити</string>
+    <string name="sync_token_missing">Не задано: додайте пристрій в адмінці OwnBudget і вставте його токен</string>
+    <string name="sync_token_title">Токен пристрою</string>
+    <string name="sync_token_text">Вставте токен, який сервер показав один раз при додаванні пристрою. З новим токеном усі записи надсилаються знову.</string>
+    <string name="sync_token_label">Токен</string>
+    <string name="sync_token_save">Зберегти</string>
+    <string name="sync_token_remove">Видалити</string>
+    <string name="sync_now">Синхронізувати зараз</string>
+    <string name="sync_status_never">Ще не синхронізовано</string>
+    <string name="sync_status_last">Остання синхронізація: %1$s</string>
+    <string name="sync_status_pending">Очікує надсилання: %1$s</string>
+    <string name="sync_status_running">Синхронізація…</string>
+    <string name="sync_check">Перевірити з’єднання</string>
+    <string name="sync_check_hint">Перевіряє адресу й токен, нічого не надсилає</string>
+    <string name="sync_check_ok">З’єднання працює, токен прийнято</string>
+    <string name="sync_done">Синхронізовано, надіслано: %1$s</string>
+    <string name="sync_not_configured">Спершу задайте токен пристрою</string>
+    <string name="sync_error_no_connection">Немає з’єднання з сервером. Спроба повториться сама</string>
+    <string name="sync_error_unauthorized">Сервер не приймає цей токен</string>
+    <string name="sync_error_rejected">Сервер відхилив дані</string>
+    <string name="sync_error_server">Помилка сервера. Спроба повториться сама</string>
+</resources>

@@ -2,10 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- The app is fully offline: strip INTERNET even if a dependency declares it. -->
-    <uses-permission
-        android:name="android.permission.INTERNET"
-        tools:node="remove" />
+    <!--
+        Only for the one-way sync to the user's own OwnBudget server (HTTPS in release builds).
+        No analytics, crash reporting or other network use.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:name=".OwnExpensesApplication"

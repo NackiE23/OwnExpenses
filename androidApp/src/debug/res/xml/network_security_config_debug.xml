@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug only: lets the app reach `manage.py runserver` on the computer over HTTP
+    (10.0.2.2 from the emulator, the computer's LAN address from a phone). Release builds keep
+    the default, which allows HTTPS only.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

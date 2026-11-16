@@ -6,11 +6,13 @@ import androidx.sqlite.SQLiteException
 import com.nackie.ownexpenses.data.local.AppDatabase
 import com.nackie.ownexpenses.data.local.Converters
 import com.nackie.ownexpenses.data.local.entity.CategoryEntity
+import com.nackie.ownexpenses.data.local.entity.SyncDeletionEntity
 import com.nackie.ownexpenses.data.local.entity.TransactionEntity
 import com.nackie.ownexpenses.domain.model.CsvDelimiter
 import com.nackie.ownexpenses.domain.model.ThemeMode
 import com.nackie.ownexpenses.domain.repository.SettingsRepository
 import com.nackie.ownexpenses.presentation.categories.CategoryPalette
+import com.nackie.ownexpenses.sync.newSyncId
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.SerializationException
@@ -125,16 +127,28 @@ class BackupService internal constructor(
     suspend fun restore(backup: RestorableBackup): Boolean {
         val transactionDao = database.transactionDao()
         val categoryDao = database.categoryDao()
+        val syncDao = database.syncDao()
         val written =
             try {
                 database.useWriterConnection { connection ->
                     connection.immediateTransaction {
+                        val previousSyncIds = syncDao.getTransactionSyncIds()
                         transactionDao.deleteAll()
                         categoryDao.deleteAllSubcategories()
                         categoryDao.deleteAll()
                         // Parents first, so foreign keys hold at every insert.
                         categoryDao.insertAll(backup.categories.sortedBy { it.parentId != null })
                         transactionDao.insertAll(backup.transactions)
+
+                        // The sync server must end up with exactly the restored data: records that are
+                        // gone become deletions, and every restored record is sent again as the newest.
+                        val now = clock.now().toEpochMilliseconds()
+                        val restoredSyncIds = backup.transactions.mapTo(HashSet()) { it.syncId }
+                        syncDao.insertDeletions(
+                            previousSyncIds.filterNot { it in restoredSyncIds }.map { SyncDeletionEntity(it, now) },
+                        )
+                        syncDao.deleteDeletionsOfExistingTransactions()
+                        syncDao.markAllPending(now)
                     }
                 }
                 true
@@ -176,6 +190,7 @@ private fun CategoryEntity.toBackup() =
         icon = icon,
         sortOrder = sortOrder,
         archived = isArchived,
+        syncId = syncId,
     )
 
 private fun TransactionEntity.toBackup() =
@@ -188,6 +203,7 @@ private fun TransactionEntity.toBackup() =
         description = description,
         createdAt = createdAt,
         updatedAt = updatedAt,
+        syncId = syncId,
     )
 
 /** Validates everything the database would otherwise reject or store inconsistently. */
@@ -195,6 +211,8 @@ private fun BackupDocument.toRestorable(): RestorableBackup {
     val categoriesById = categories.associateBy { it.id }
     require(categoriesById.size == categories.size) { "Duplicate category ids" }
     require(transactions.map { it.id }.toSet().size == transactions.size) { "Duplicate record ids" }
+    requireUniqueSyncIds(categories.mapNotNull { it.syncId })
+    requireUniqueSyncIds(transactions.mapNotNull { it.syncId })
 
     val categoryEntities =
         categories.map { category ->
@@ -215,6 +233,7 @@ private fun BackupDocument.toRestorable(): RestorableBackup {
                 icon = category.icon,
                 sortOrder = category.sortOrder,
                 isArchived = category.archived,
+                syncId = category.syncId.toSyncIdOrNew(),
             )
         }
 
@@ -232,6 +251,7 @@ private fun BackupDocument.toRestorable(): RestorableBackup {
                 description = transaction.description?.takeIf { it.isNotBlank() },
                 createdAt = transaction.createdAt,
                 updatedAt = transaction.updatedAt,
+                syncId = transaction.syncId.toSyncIdOrNew(),
             )
         }
 
@@ -243,6 +263,15 @@ private fun BackupDocument.toRestorable(): RestorableBackup {
         createdAt = runCatching { Instant.parse(createdAt) }.getOrNull(),
     )
 }
+
+private val SYNC_ID_PATTERN = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+
+private fun requireUniqueSyncIds(syncIds: List<String>) {
+    require(syncIds.toSet().size == syncIds.size) { "Duplicate sync ids" }
+}
+
+/** A backup from before sync, or with an id the server would refuse, gets a fresh id. */
+private fun String?.toSyncIdOrNew(): String = this?.lowercase()?.takeIf { SYNC_ID_PATTERN.matches(it) } ?: newSyncId()
 
 private fun String.toTransactionType() =
     try {

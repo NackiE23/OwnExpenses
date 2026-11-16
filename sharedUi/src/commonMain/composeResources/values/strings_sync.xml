@@ -1,0 +1,26 @@
+<resources>
+    <string name="sync_section">Server sync</string>
+    <string name="sync_server">Server: %1$s</string>
+    <string name="sync_token">Device token</string>
+    <string name="sync_token_set">Set. Tap to replace or remove</string>
+    <string name="sync_token_missing">Not set: add a device in the OwnBudget admin and paste its token</string>
+    <string name="sync_token_title">Device token</string>
+    <string name="sync_token_text">Paste the token the server showed once when the device was added. With a new token all records are sent again.</string>
+    <string name="sync_token_label">Token</string>
+    <string name="sync_token_save">Save</string>
+    <string name="sync_token_remove">Remove</string>
+    <string name="sync_now">Sync now</string>
+    <string name="sync_status_never">Not synced yet</string>
+    <string name="sync_status_last">Last sync: %1$s</string>
+    <string name="sync_status_pending">Waiting to be sent: %1$s</string>
+    <string name="sync_status_running">Syncing…</string>
+    <string name="sync_check">Check connection</string>
+    <string name="sync_check_hint">Checks the address and the token, sends nothing</string>
+    <string name="sync_check_ok">Connection works, the token is accepted</string>
+    <string name="sync_done">Synced, sent: %1$s</string>
+    <string name="sync_not_configured">Set the device token first</string>
+    <string name="sync_error_no_connection">No connection to the server. It will retry on its own</string>
+    <string name="sync_error_unauthorized">The server does not accept this token</string>
+    <string name="sync_error_rejected">The server refused the data</string>
+    <string name="sync_error_server">Server error. It will retry on its own</string>
+</resources>

@@ -24,7 +24,11 @@ import com.nackie.ownexpenses.presentation.home.HomeViewModel
 import com.nackie.ownexpenses.presentation.quickentry.QuickEntryViewModel
 import com.nackie.ownexpenses.presentation.settings.SettingsViewModel
 import com.nackie.ownexpenses.presentation.statistics.StatisticsViewModel
+import com.nackie.ownexpenses.presentation.sync.SyncViewModel
 import com.nackie.ownexpenses.presentation.widget.WidgetSnapshotSource
+import com.nackie.ownexpenses.sync.SyncApi
+import com.nackie.ownexpenses.sync.SyncService
+import com.nackie.ownexpenses.sync.SyncStateStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,8 +38,9 @@ import org.koin.dsl.module
 import kotlin.time.Clock
 
 /**
- * Data layer graph. Platforms contribute their builders through [platformModule]; the UI
- * layer must provide [com.nackie.ownexpenses.domain.model.DefaultCategoryNames].
+ * Data layer graph. Platforms contribute their builders and the HTTP client through [platformModule];
+ * the UI layer must provide [com.nackie.ownexpenses.domain.model.DefaultCategoryNames] and the app
+ * must provide [com.nackie.ownexpenses.sync.SyncConfig] (server address from the build).
  */
 val sharedModule: Module =
     module {
@@ -56,6 +61,10 @@ val sharedModule: Module =
         single { SumlioImportService(get()) }
         single { WidgetSnapshotSource(get(), get(), get()) }
 
+        single { SyncStateStore(get()) }
+        single { SyncApi(get()) }
+        single { SyncService(get(), get(), get(), get(), get()) }
+
         single { DefaultCategorySeeder(get(), get(), get()) }
         single { AppInitializer(get(), CoroutineScope(SupervisorJob() + Dispatchers.Default)) }
 
@@ -66,6 +75,7 @@ val sharedModule: Module =
         viewModelOf(::StatisticsViewModel)
         viewModelOf(::CategoriesViewModel)
         viewModelOf(::AppViewModel)
+        viewModelOf(::SyncViewModel)
     }
 
 internal expect val platformModule: Module

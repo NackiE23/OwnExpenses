@@ -175,6 +175,37 @@ class TransactionRepositoryTest {
         }
 
     @Test
+    fun undoAfterTheServerGotTheDeletionMakesTheRecordNewer() =
+        runTest {
+            val id = add(cafe, 89_00, OCT_1)
+            val original = assertNotNull(repository.deleteTransaction(id))
+            // The sync sent the tombstone in the meantime.
+            database.syncDao().deleteSentDeletion(original.syncId, clock.now.toEpochMilliseconds())
+
+            clock.now = Instant.parse("2026-10-25T08:00:00Z")
+            repository.restoreTransaction(original)
+
+            val restored = assertNotNull(repository.getTransaction(id))
+            assertEquals(original.syncId, restored.syncId)
+            assertEquals(clock.now, restored.updatedAt)
+        }
+
+    @Test
+    fun deleteLeavesATombstoneAndEditsAreUnsentAgain() =
+        runTest {
+            val id = add(cafe, 89_00, OCT_1)
+            val syncId = assertNotNull(repository.getTransaction(id)).syncId
+            database.syncDao().markSent(syncId, clock.now.toEpochMilliseconds())
+            assertEquals(0, database.syncDao().observePendingCount().first())
+
+            repository.updateTransaction(id, TransactionInput(cafe, 99_00, OCT_1))
+            assertEquals(1, database.syncDao().observePendingCount().first())
+
+            repository.deleteTransaction(id)
+            assertEquals(listOf(syncId), database.syncDao().getDeletions(10).map { it.syncId })
+        }
+
+    @Test
     fun deletingMissingTransactionReturnsNull() =
         runTest {
             assertNull(repository.deleteTransaction(42))

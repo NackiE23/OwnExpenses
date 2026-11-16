@@ -49,6 +49,10 @@ import com.nackie.ownexpenses.presentation.settings.RestoreSummary
 import com.nackie.ownexpenses.presentation.settings.SettingsEvent
 import com.nackie.ownexpenses.presentation.settings.SettingsUiState
 import com.nackie.ownexpenses.presentation.settings.SettingsViewModel
+import com.nackie.ownexpenses.presentation.sync.SyncEvent
+import com.nackie.ownexpenses.presentation.sync.SyncViewModel
+import com.nackie.ownexpenses.sync.SyncOutcome
+import com.nackie.ownexpenses.sync.SyncStatus
 import com.nackie.ownexpenses.ui.format.dayMonthYear
 import com.nackie.ownexpenses.ui.format.periodLabel
 import com.nackie.ownexpenses.ui.format.rememberMoneyFormatter
@@ -112,6 +116,10 @@ import com.nackie.ownexpenses.ui.resources.settings_data
 import com.nackie.ownexpenses.ui.resources.settings_language
 import com.nackie.ownexpenses.ui.resources.settings_language_hint
 import com.nackie.ownexpenses.ui.resources.settings_theme
+import com.nackie.ownexpenses.ui.resources.sync_check_ok
+import com.nackie.ownexpenses.ui.resources.sync_done
+import com.nackie.ownexpenses.ui.resources.sync_not_configured
+import com.nackie.ownexpenses.ui.resources.sync_section
 import com.nackie.ownexpenses.ui.resources.theme_dark
 import com.nackie.ownexpenses.ui.resources.theme_light
 import com.nackie.ownexpenses.ui.resources.theme_system
@@ -129,8 +137,10 @@ internal fun MoreScreen(
     onManageCategories: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = koinViewModel(),
+    syncViewModel: SyncViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val syncStatus by syncViewModel.status.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     // What the next "saved" message is about; the platform picker only reports success.
@@ -228,6 +238,32 @@ internal fun MoreScreen(
         }
     }
 
+    LaunchedEffect(syncViewModel) {
+        syncViewModel.events.collect { event ->
+            when (event) {
+                is SyncEvent.Finished -> {
+                    when (val outcome = event.outcome) {
+                        SyncOutcome.NotConfigured -> {
+                            showMessage(Res.string.sync_not_configured)
+                        }
+
+                        is SyncOutcome.Failed -> {
+                            showMessage(outcome.error.message)
+                        }
+
+                        is SyncOutcome.Success -> {
+                            if (event.wasCheck) {
+                                showMessage(Res.string.sync_check_ok)
+                            } else {
+                                showMessage(Res.string.sync_done, outcome.sent.toString())
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -248,6 +284,10 @@ internal fun MoreScreen(
                 opening = OpenPurpose.SUMLIO
                 files.open(CSV_MIME_TYPES)
             },
+            syncStatus = syncStatus,
+            onSyncTokenClick = { dialog = MoreDialog.SYNC_TOKEN },
+            onSyncClick = syncViewModel::syncNow,
+            onSyncCheckClick = syncViewModel::checkConnection,
             modifier = Modifier.padding(innerPadding),
         )
     }
@@ -270,6 +310,21 @@ internal fun MoreScreen(
                 onTarget = { target ->
                     dialog = MoreDialog.NONE
                     viewModel.createBackup(target)
+                },
+                onDismiss = { dialog = MoreDialog.NONE },
+            )
+        }
+
+        MoreDialog.SYNC_TOKEN -> {
+            SyncTokenDialog(
+                hasToken = syncStatus?.hasToken == true,
+                onSave = { token ->
+                    dialog = MoreDialog.NONE
+                    syncViewModel.saveToken(token)
+                },
+                onRemove = {
+                    dialog = MoreDialog.NONE
+                    syncViewModel.saveToken("")
                 },
                 onDismiss = { dialog = MoreDialog.NONE },
             )
@@ -300,6 +355,7 @@ private enum class MoreDialog {
     NONE,
     EXPORT,
     BACKUP,
+    SYNC_TOKEN,
 }
 
 private enum class OpenPurpose {
@@ -324,6 +380,10 @@ private fun SettingsContent(
     onBackupClick: () -> Unit,
     onRestoreClick: () -> Unit,
     onImportSumlioClick: () -> Unit,
+    syncStatus: SyncStatus?,
+    onSyncTokenClick: () -> Unit,
+    onSyncClick: () -> Unit,
+    onSyncCheckClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
@@ -381,6 +441,17 @@ private fun SettingsContent(
             enabled = !state.isBusy,
             onClick = onRestoreClick,
         )
+
+        if (syncStatus != null && syncStatus.isAvailable) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            SectionTitle(stringResource(Res.string.sync_section))
+            SyncSection(
+                status = syncStatus,
+                onTokenClick = onSyncTokenClick,
+                onSyncClick = onSyncClick,
+                onCheckClick = onSyncCheckClick,
+            )
+        }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
         SectionTitle(stringResource(Res.string.import_section))

@@ -6,10 +6,14 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.nackie.ownexpenses.domain.model.TransactionType
+import com.nackie.ownexpenses.sync.newSyncId
 
 /**
  * Category or subcategory. Subcategories are one level deep: [parentId] points to a
  * top-level category and the subcategory inherits its [type].
+ *
+ * [syncId] identifies the category on the sync server for life. Categories need no pending flag:
+ * every sync sends the full list.
  */
 @Entity(
     tableName = "categories",
@@ -24,6 +28,7 @@ import com.nackie.ownexpenses.domain.model.TransactionType
     indices = [
         Index("parent_id"),
         Index("type", "is_archived"),
+        Index(value = ["sync_id"], unique = true),
     ],
 )
 data class CategoryEntity(
@@ -41,4 +46,7 @@ data class CategoryEntity(
     val sortOrder: Int,
     @ColumnInfo(name = "is_archived", defaultValue = "0")
     val isArchived: Boolean = false,
+    /** The default only serves the migration; new rows always get a fresh UUID. */
+    @ColumnInfo(name = "sync_id", defaultValue = "''")
+    val syncId: String = newSyncId(),
 )

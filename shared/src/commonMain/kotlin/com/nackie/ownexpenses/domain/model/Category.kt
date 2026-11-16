@@ -15,6 +15,8 @@ data class Category(
     val icon: String,
     val sortOrder: Int,
     val isArchived: Boolean,
+    /** Permanent id on the sync server. Empty only for values built outside the database (tests, previews). */
+    val syncId: String = "",
 ) {
     val isSubcategory: Boolean get() = parentId != null
 }
