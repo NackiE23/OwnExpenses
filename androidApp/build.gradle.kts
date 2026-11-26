@@ -48,8 +48,8 @@ android {
                 .get()
                 .toInt()
         // Every release needs a higher versionCode, or Android refuses to install it over the old one.
-        versionCode = 7
-        versionName = "1.4.0"
+        versionCode = 8
+        versionName = "1.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SYNC_SERVER_URL", "\"${syncServerUrl.replace("\"", "")}\"")
