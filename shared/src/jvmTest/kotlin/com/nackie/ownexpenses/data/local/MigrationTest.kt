@@ -82,6 +82,26 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migration3To4LeavesExistingRecordsUnstarred() {
+        helper.createDatabase(3).use { connection ->
+            connection.execSQL(category(id = 1, color = custom()))
+            connection.execSQL(
+                "INSERT INTO transactions (id, type, amount_minor, category_id, date, description, created_at, " +
+                    "updated_at, sync_id, sync_pending) VALUES (1, 'expense', 8500, 1, 20000, 'cafe', 0, 0, 'a', 0)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(4, listOf(MIGRATION_3_4)).use { connection ->
+            connection.prepare("SELECT is_starred, sync_pending FROM transactions").use { statement ->
+                assertTrue(statement.step())
+                assertEquals(0L, statement.getLong(0))
+                // Not a change of the record: nothing to resend.
+                assertEquals(0L, statement.getLong(1))
+            }
+        }
+    }
+
     private fun custom() = 0xFF123456.toInt()
 
     private fun category(

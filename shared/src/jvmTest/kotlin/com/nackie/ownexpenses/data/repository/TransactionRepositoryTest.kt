@@ -150,6 +150,21 @@ class TransactionRepositoryTest {
         }
 
     @Test
+    fun onlyExpensesWithADescriptionAreStarred() =
+        runTest {
+            val starred = repository.addTransaction(TransactionInput(cafe, 89_00, OCT_1, "Concert", isStarred = true))
+            val income = repository.addTransaction(TransactionInput(salary, 1000_00, OCT_1, "Bonus", isStarred = true))
+
+            assertEquals(true, repository.getTransaction(starred)?.isStarred)
+            assertEquals(false, repository.getTransaction(income)?.isStarred)
+            assertFailsWith<IllegalArgumentException> { TransactionInput(cafe, 89_00, OCT_1, "  ", isStarred = true) }
+
+            // Moving a starred expense to an income category takes the star off.
+            repository.updateTransaction(starred, TransactionInput(salary, 89_00, OCT_1, "Concert", isStarred = true))
+            assertEquals(false, repository.getTransaction(starred)?.isStarred)
+        }
+
+    @Test
     fun timestampsComeFromClock() =
         runTest {
             val id = add(cafe, 89_00, OCT_1)

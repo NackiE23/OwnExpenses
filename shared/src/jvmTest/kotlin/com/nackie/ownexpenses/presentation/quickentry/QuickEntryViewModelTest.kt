@@ -238,6 +238,79 @@ internal class QuickEntryViewModelTest : MainDispatcherTest() {
         assertEquals("Airport", viewModel.uiState.value?.description)
     }
 
+    @Test
+    fun starringWithoutDescriptionAsksForOne() {
+        viewModel.open(transport)
+        press(5)
+
+        viewModel.toggleStar()
+        val asking = assertNotNull(viewModel.uiState.value)
+        assertTrue(asking.isStarred)
+        assertTrue(asking.isDescriptionDialogOpen)
+        assertFalse(asking.canSubmit, "A starred expense cannot be saved without a description")
+
+        // Closing the dialog without a description takes the star off again.
+        viewModel.dismissDescriptionDialog()
+        assertEquals(false, viewModel.uiState.value?.isStarred)
+        assertEquals(true, viewModel.uiState.value?.canSubmit)
+
+        viewModel.toggleStar()
+        viewModel.saveDescription("Concert")
+        val starred = assertNotNull(viewModel.uiState.value)
+        assertTrue(starred.isStarred)
+        assertTrue(starred.canSubmit)
+
+        // Clearing the description takes the star off; with a description the star toggles directly.
+        viewModel.openDescriptionDialog()
+        viewModel.saveDescription(" ")
+        assertEquals(false, viewModel.uiState.value?.isStarred)
+        viewModel.saveDescription("Concert")
+        viewModel.toggleStar()
+        assertEquals(true, viewModel.uiState.value?.isStarred)
+        assertEquals(false, viewModel.uiState.value?.isDescriptionDialogOpen)
+        viewModel.toggleStar()
+        assertEquals(false, viewModel.uiState.value?.isStarred)
+    }
+
+    @Test
+    fun starredExpenseIsSavedAndEditedWithItsStar() =
+        runTest {
+            viewModel.events.test {
+                viewModel.open(transport)
+                press(4, 5, 0, 0)
+                viewModel.toggleStar()
+                viewModel.saveDescription("Concert")
+                viewModel.submit()
+
+                val added = assertIs<QuickEntryEvent.Added>(awaitItem())
+                assertEquals(true, transactions.getTransaction(added.transactionId)?.isStarred)
+
+                viewModel.openForEdit(added.transactionId)
+                val editing = viewModel.uiState.filterNotNull().first()
+                assertTrue(editing.isStarred)
+                viewModel.toggleStar()
+                viewModel.submit()
+
+                assertIs<QuickEntryEvent.Updated>(awaitItem())
+                assertEquals(false, transactions.getTransaction(added.transactionId)?.isStarred)
+            }
+        }
+
+    @Test
+    fun incomesCannotBeStarred() =
+        runTest {
+            database.insertCategory("Salary", TransactionType.INCOME)
+            val salary = RoomCategoryRepository(database).observeCategories(TransactionType.INCOME).first().single()
+            viewModel.open(salary)
+
+            viewModel.toggleStar()
+
+            val state = assertNotNull(viewModel.uiState.value)
+            assertFalse(state.canStar)
+            assertFalse(state.isStarred)
+            assertFalse(state.isDescriptionDialogOpen)
+        }
+
     private fun press(vararg digits: Int) {
         digits.forEach { viewModel.onKey(AmountKey.Digit(it)) }
     }

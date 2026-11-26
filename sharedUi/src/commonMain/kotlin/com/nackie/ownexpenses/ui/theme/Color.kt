@@ -49,6 +49,8 @@ data class MoneyColors(
     val expense: Color,
     val income: Color,
     val negativeBalance: Color,
+    /** The star of a notable expense. */
+    val star: Color,
 )
 
 internal val LightMoneyColors =
@@ -56,6 +58,7 @@ internal val LightMoneyColors =
         expense = Color(0xFFD50000),
         income = Color(0xFF00873E),
         negativeBalance = Color(0xFFD50000),
+        star = Color(0xFFB57F00),
     )
 
 internal val DarkMoneyColors =
@@ -63,4 +66,5 @@ internal val DarkMoneyColors =
         expense = Color(0xFFFF5370),
         income = Color(0xFF3DDC84),
         negativeBalance = Color(0xFFFF5370),
+        star = Color(0xFFFFC233),
     )

@@ -21,7 +21,7 @@ import kotlinx.coroutines.IO
  */
 @Database(
     entities = [CategoryEntity::class, TransactionEntity::class, SyncDeletionEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)

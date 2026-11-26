@@ -14,8 +14,10 @@ data class OperationsFilter(
     val categoryIds: Set<Long> = emptySet(),
     /** Text the description must contain, ignoring case; blank means any. */
     val query: String = "",
+    /** Only notable ("starred") expenses. */
+    val starredOnly: Boolean = false,
 ) {
-    val isActive: Boolean get() = categoryIds.isNotEmpty() || query.isNotBlank()
+    val isActive: Boolean get() = categoryIds.isNotEmpty() || query.isNotBlank() || starredOnly
 }
 
 /** Ids a record of this category can carry: the category itself and each subcategory. */

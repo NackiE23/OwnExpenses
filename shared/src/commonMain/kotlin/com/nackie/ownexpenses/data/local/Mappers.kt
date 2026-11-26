@@ -31,6 +31,7 @@ internal fun TransactionEntity.toDomain(): Transaction =
         createdAt = Instant.fromEpochMilliseconds(createdAt),
         updatedAt = Instant.fromEpochMilliseconds(updatedAt),
         syncId = syncId,
+        isStarred = isStarred,
     )
 
 internal fun Transaction.toEntity(): TransactionEntity =
@@ -41,6 +42,7 @@ internal fun Transaction.toEntity(): TransactionEntity =
         categoryId = categoryId,
         date = date,
         description = description,
+        isStarred = isStarred,
         createdAt = createdAt.toEpochMilliseconds(),
         updatedAt = updatedAt.toEpochMilliseconds(),
         syncId = syncId.ifEmpty { newSyncId() },

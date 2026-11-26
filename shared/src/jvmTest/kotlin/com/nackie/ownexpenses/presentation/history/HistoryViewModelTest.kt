@@ -160,6 +160,33 @@ internal class HistoryViewModelTest : MainDispatcherTest() {
         }
 
     @Test
+    fun starredFilterShowsOnlyNotableExpenses() =
+        runTest {
+            transactions.addTransaction(
+                TransactionInput(cafe, 4500_00, LocalDate(2026, 10, 24), "Concert", isStarred = true),
+            )
+            transactions.addTransaction(TransactionInput(cafe, 50_00, LocalDate(2026, 10, 24), "Concert ticket"))
+
+            viewModel.uiState.test {
+                awaitUntil {
+                    it.days
+                        .singleOrNull()
+                        ?.items
+                        ?.size == 2
+                }
+                viewModel.toggleStarredOnly()
+
+                val state = awaitUntil { it.filter.starredOnly }
+                assertEquals(listOf(4500_00L), amounts(state))
+                assertEquals(4500_00, state.totals.expenseMinor)
+
+                viewModel.toggleStarredOnly()
+                assertEquals(2, amounts(awaitUntil { !it.filter.isActive }).size)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
     fun filterIsSharedWithTheMainScreen() =
         runTest {
             val transport = database.insertCategory("Transport", TransactionType.EXPENSE)

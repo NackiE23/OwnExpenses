@@ -44,6 +44,11 @@ internal data class SyncOperationDto(
     /** ISO-8601 calendar date. */
     val date: String,
     val description: String?,
+    /**
+     * Notable expense. The server adds "-<amount> <description>" to its month's notes when a record
+     * arrives starred for the first time (new, or edited from unstarred); later edits leave the note.
+     */
+    val starred: Boolean,
     /** Epoch milliseconds. */
     @SerialName("created_at") val createdAt: Long,
     /** Epoch milliseconds; the newer version of a record wins on the server. */
@@ -87,6 +92,7 @@ internal fun PendingTransaction.toDto() =
         categoryId = categorySyncId,
         date = date.toString(),
         description = description?.forServer(MAX_DESCRIPTION_LENGTH),
+        starred = isStarred,
         createdAt = createdAt,
         updatedAt = updatedAt,
     )

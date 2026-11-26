@@ -10,6 +10,7 @@ import com.nackie.ownexpenses.data.local.entity.SyncDeletionEntity
 import com.nackie.ownexpenses.data.local.entity.TransactionEntity
 import com.nackie.ownexpenses.domain.model.CsvDelimiter
 import com.nackie.ownexpenses.domain.model.ThemeMode
+import com.nackie.ownexpenses.domain.model.TransactionType
 import com.nackie.ownexpenses.domain.repository.SettingsRepository
 import com.nackie.ownexpenses.presentation.categories.CategoryPalette
 import com.nackie.ownexpenses.sync.newSyncId
@@ -201,6 +202,7 @@ private fun TransactionEntity.toBackup() =
         categoryId = categoryId,
         date = date.toString(),
         description = description,
+        starred = isStarred,
         createdAt = createdAt,
         updatedAt = updatedAt,
         syncId = syncId,
@@ -242,13 +244,17 @@ private fun BackupDocument.toRestorable(): RestorableBackup {
             val category = requireNotNull(categoriesById[transaction.categoryId]) { "Unknown category" }
             require(category.type == transaction.type) { "Record type differs from its category" }
             require(transaction.amountMinor > 0) { "Amount must be positive" }
+            val description = transaction.description?.takeIf { it.isNotBlank() }
+            val type = transaction.type.toTransactionType()
             TransactionEntity(
                 id = transaction.id,
-                type = transaction.type.toTransactionType(),
+                type = type,
                 amountMinor = transaction.amountMinor,
                 categoryId = transaction.categoryId,
                 date = LocalDate.parse(transaction.date),
-                description = transaction.description?.takeIf { it.isNotBlank() },
+                description = description,
+                // Same rule as on entry: only an expense with a description carries the star.
+                isStarred = transaction.starred && type == TransactionType.EXPENSE && description != null,
                 createdAt = transaction.createdAt,
                 updatedAt = transaction.updatedAt,
                 syncId = transaction.syncId.toSyncIdOrNew(),
