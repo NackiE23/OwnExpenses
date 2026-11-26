@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
@@ -54,10 +55,13 @@ import com.nackie.ownexpenses.ui.quickentry.UndoSnackbarHost
 import com.nackie.ownexpenses.ui.resources.Res
 import com.nackie.ownexpenses.ui.resources.category_with_subcategory
 import com.nackie.ownexpenses.ui.resources.filter_no_matches
+import com.nackie.ownexpenses.ui.resources.filter_starred_label
 import com.nackie.ownexpenses.ui.resources.history_empty
+import com.nackie.ownexpenses.ui.resources.ic_star
 import com.nackie.ownexpenses.ui.resources.type_expenses
 import com.nackie.ownexpenses.ui.resources.type_incomes
 import com.nackie.ownexpenses.ui.theme.OwnExpensesTheme
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -93,6 +97,7 @@ internal fun OperationsScreen(
                 FilterBarActions(
                     query = filter.query,
                     onQueryChange = historyViewModel::setQuery,
+                    onToggleStarredOnly = historyViewModel::toggleStarredOnly,
                     onOpenFilter = { showFilter = true },
                     onRemoveCategory = historyViewModel::removeCategory,
                 ),
@@ -145,7 +150,9 @@ private fun OperationsContent(
                 OperationsSearchBar(
                     query = filterActions.query,
                     categoriesFiltered = state.filter.categoryIds.isNotEmpty(),
+                    starredOnly = state.filter.starredOnly,
                     onQueryChange = filterActions.onQueryChange,
+                    onToggleStarredOnly = filterActions.onToggleStarredOnly,
                     onOpenFilter = filterActions.onOpenFilter,
                 )
                 CategoryFilterChips(
@@ -194,10 +201,11 @@ private fun OperationsContent(
     }
 }
 
-/** Search text and the category filter chips' callbacks, bundled to keep the content signature short. */
+/** Search text and the filter bar's callbacks, bundled to keep the content signature short. */
 private class FilterBarActions(
     val query: String,
     val onQueryChange: (String) -> Unit,
+    val onToggleStarredOnly: () -> Unit,
     val onOpenFilter: () -> Unit,
     val onRemoveCategory: (CategoryWithSubcategories) -> Unit,
 )
@@ -301,6 +309,14 @@ private fun OperationRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
+        if (item.transaction.isStarred) {
+            Icon(
+                painter = painterResource(Res.drawable.ic_star),
+                contentDescription = stringResource(Res.string.filter_starred_label),
+                tint = OwnExpensesTheme.moneyColors.star,
+                modifier = Modifier.size(18.dp),
+            )
         }
         Text(
             text = formatter.formatSigned(item.transaction.signedAmountMinor),

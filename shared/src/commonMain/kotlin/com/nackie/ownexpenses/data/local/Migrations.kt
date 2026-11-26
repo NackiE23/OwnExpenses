@@ -41,10 +41,18 @@ internal val MIGRATION_2_3 =
         }
     }
 
+/** Notable ("starred") expenses; every existing record starts without the star. */
+internal val MIGRATION_3_4 =
+    object : Migration(3, 4) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE transactions ADD COLUMN is_starred INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
 /** UUID v4 in SQL, evaluated per row: random hex with the version digit 4 and variant 8, 9, a or b. */
 private const val RANDOM_UUID_SQL =
     "lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || " +
         "substr(lower(hex(randomblob(2))), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || " +
         "substr(lower(hex(randomblob(2))), 2) || '-' || lower(hex(randomblob(6)))"
 
-internal val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+internal val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)

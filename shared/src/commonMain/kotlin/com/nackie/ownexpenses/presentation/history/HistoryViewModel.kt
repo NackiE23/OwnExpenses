@@ -43,8 +43,8 @@ data class DayGroup(
 )
 
 /**
- * Operations tab: records of the shared period grouped by day, optionally filtered by categories
- * and description text. Editing and deleting go through the entry panel's ViewModel, so undo
+ * Operations tab: records of the shared period grouped by day, optionally filtered by categories,
+ * description text and the star. Editing and deleting go through the entry panel's ViewModel, so undo
  * works the same everywhere.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -116,6 +116,8 @@ class HistoryViewModel(
     fun removeCategory(category: CategoryWithSubcategories) =
         updateFilter { it.copy(categoryIds = it.categoryIds - category.leafIds()) }
 
+    fun toggleStarredOnly() = updateFilter { it.copy(starredOnly = !it.starredOnly) }
+
     fun clearCategories() = updateFilter { it.copy(categoryIds = emptySet()) }
 
     fun clearFilter() = filterSelection.set(OperationsFilter())
@@ -129,12 +131,16 @@ class HistoryViewModel(
     }
 }
 
-/** Records in the chosen categories whose description contains the query, ignoring case. */
+/**
+ * Records in the chosen categories whose description contains the query, ignoring case; with
+ * [OperationsFilter.starredOnly], only starred ones.
+ */
 internal fun List<TransactionDetails>.filteredBy(criteria: OperationsFilter): List<TransactionDetails> {
     if (!criteria.isActive) return this
     val query = criteria.query.trim()
     return filter { item ->
         (criteria.categoryIds.isEmpty() || item.transaction.categoryId in criteria.categoryIds) &&
+            (!criteria.starredOnly || item.transaction.isStarred) &&
             (query.isEmpty() || item.transaction.description?.contains(query, ignoreCase = true) == true)
     }
 }

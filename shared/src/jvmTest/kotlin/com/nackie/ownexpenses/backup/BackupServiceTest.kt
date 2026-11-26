@@ -245,7 +245,7 @@ class BackupServiceTest {
         categories.updateCategory(cafe, "Cafe", 0xFFF50057.toInt(), "cafe")
         transactions.addTransaction(TransactionInput(salary, 1000_00, LocalDate(2026, 10, 1)))
         transactions.addTransaction(TransactionInput(taxi, 150_00, LocalDate(2026, 10, 3), "Airport \"Boryspil\""))
-        transactions.addTransaction(TransactionInput(cafe, 89_50, LocalDate(2026, 10, 3)))
+        transactions.addTransaction(TransactionInput(cafe, 89_50, LocalDate(2026, 10, 3), "Concert", isStarred = true))
     }
 
     private fun document(

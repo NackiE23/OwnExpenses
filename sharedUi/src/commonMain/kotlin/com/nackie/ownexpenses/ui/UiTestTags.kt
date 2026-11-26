@@ -26,4 +26,6 @@ object UiTestTags {
     const val DESCRIPTION = "description"
     const val DESCRIPTION_FIELD = "description_field"
     const val DESCRIPTION_SAVE = "description_save"
+    const val STAR_TOGGLE = "star_toggle"
+    const val STARRED_FILTER = "starred_filter"
 }

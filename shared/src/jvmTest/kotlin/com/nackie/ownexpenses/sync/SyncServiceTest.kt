@@ -147,6 +147,30 @@ class SyncServiceTest {
         }
 
     @Test
+    fun starIsSent() =
+        runTest {
+            val service = createService()
+            service.setToken("token")
+            add(cafe, 85_00)
+            transactions.addTransaction(
+                TransactionInput(cafe, 4500_00, LocalDate(2026, 11, 14), "Concert", isStarred = true),
+            )
+
+            service.sync()
+
+            val operations =
+                sent
+                    .single()
+                    .getValue("operations")
+                    .jsonArray
+                    .map { it.jsonObject }
+            assertEquals(
+                listOf("false", "true"),
+                operations.map { it.getValue("starred").jsonPrimitive.content },
+            )
+        }
+
+    @Test
     fun editDuringRequestStaysPending() =
         runTest {
             val service = createService()

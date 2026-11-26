@@ -16,6 +16,9 @@
     <string name="quick_entry_pick_date">Pick a date</string>
     <string name="quick_entry_add_description">Add description</string>
     <string name="quick_entry_description">Description</string>
+    <string name="quick_entry_star">Mark as notable</string>
+    <string name="quick_entry_unstar">Remove notable mark</string>
+    <string name="quick_entry_star_needs_description">A notable expense needs a description</string>
     <string name="quick_entry_amount">Amount</string>
     <string name="quick_entry_plus">Plus</string>
     <string name="quick_entry_minus">Minus</string>

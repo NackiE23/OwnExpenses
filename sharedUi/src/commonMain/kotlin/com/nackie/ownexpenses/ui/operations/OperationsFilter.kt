@@ -20,6 +20,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -33,12 +34,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nackie.ownexpenses.domain.leafIds
 import com.nackie.ownexpenses.domain.model.CategoryWithSubcategories
+import com.nackie.ownexpenses.ui.UiTestTags
 import com.nackie.ownexpenses.ui.components.CategoryIconBadge
 import com.nackie.ownexpenses.ui.resources.Res
 import com.nackie.ownexpenses.ui.resources.filter_archived
@@ -49,22 +52,31 @@ import com.nackie.ownexpenses.ui.resources.filter_open
 import com.nackie.ownexpenses.ui.resources.filter_remove
 import com.nackie.ownexpenses.ui.resources.filter_reset
 import com.nackie.ownexpenses.ui.resources.filter_search_hint
+import com.nackie.ownexpenses.ui.resources.filter_starred
 import com.nackie.ownexpenses.ui.resources.filter_title
 import com.nackie.ownexpenses.ui.resources.filter_without_subcategory
 import com.nackie.ownexpenses.ui.resources.ic_close
 import com.nackie.ownexpenses.ui.resources.ic_filter
 import com.nackie.ownexpenses.ui.resources.ic_search
+import com.nackie.ownexpenses.ui.resources.ic_star
+import com.nackie.ownexpenses.ui.resources.ic_star_outline
 import com.nackie.ownexpenses.ui.resources.type_expenses
 import com.nackie.ownexpenses.ui.resources.type_incomes
+import com.nackie.ownexpenses.ui.theme.OwnExpensesTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
-/** Description search plus the button that opens the category filter; tinted while categories are chosen. */
+/**
+ * Description search, the "notable expenses only" toggle and the button that opens the category
+ * filter; the buttons are tinted while their filter is on.
+ */
 @Composable
 internal fun OperationsSearchBar(
     query: String,
     categoriesFiltered: Boolean,
+    starredOnly: Boolean,
     onQueryChange: (String) -> Unit,
+    onToggleStarredOnly: () -> Unit,
     onOpenFilter: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -85,6 +97,17 @@ internal fun OperationsSearchBar(
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.weight(1f),
         )
+        IconToggleButton(
+            checked = starredOnly,
+            onCheckedChange = { onToggleStarredOnly() },
+            modifier = Modifier.testTag(UiTestTags.STARRED_FILTER),
+        ) {
+            Icon(
+                painter = painterResource(if (starredOnly) Res.drawable.ic_star else Res.drawable.ic_star_outline),
+                contentDescription = stringResource(Res.string.filter_starred),
+                tint = if (starredOnly) OwnExpensesTheme.moneyColors.star else LocalContentColor.current,
+            )
+        }
         IconButton(onClick = onOpenFilter) {
             Icon(
                 painter = painterResource(Res.drawable.ic_filter),

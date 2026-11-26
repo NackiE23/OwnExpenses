@@ -40,6 +40,11 @@ data class QuickEntryUiState(
     val description: String = "",
     /** The description dialog is open; the text is committed only when it is confirmed. */
     val isDescriptionDialogOpen: Boolean = false,
+    /**
+     * Notable expense. Only with a description: turning the star on without one opens the description
+     * dialog, and the star stays only if the dialog leaves a description behind.
+     */
+    val isStarred: Boolean = false,
     val isSaving: Boolean = false,
     /** The record being edited; null when adding a new one. */
     val editing: Transaction? = null,
@@ -48,8 +53,12 @@ data class QuickEntryUiState(
 ) {
     val isEditing: Boolean get() = editing != null
 
+    /** Only expenses can be starred. */
+    val canStar: Boolean get() = category.type == TransactionType.EXPENSE
+
     /** Only a computable, positive result can be saved; division by zero or "50 − 80" cannot. */
-    val canSubmit: Boolean get() = (amount.result ?: 0) > 0 && !isSaving
+    val canSubmit: Boolean
+        get() = (amount.result ?: 0) > 0 && !isSaving && (!isStarred || description.isNotBlank())
 }
 
 sealed interface QuickEntryEvent {
@@ -143,6 +152,7 @@ class QuickEntryViewModel(
                         date = transaction.date,
                         today = todayProvider.today(),
                         description = transaction.description.orEmpty(),
+                        isStarred = transaction.isStarred,
                         editing = transaction,
                         categoryChoices =
                             tree
@@ -176,11 +186,34 @@ class QuickEntryViewModel(
 
     fun openDescriptionDialog() = edit { it.copy(isDescriptionDialogOpen = true) }
 
-    fun dismissDescriptionDialog() = edit { it.copy(isDescriptionDialogOpen = false) }
+    /** A star turned on without a description does not survive a dialog closed without one. */
+    fun dismissDescriptionDialog() =
+        edit { it.copy(isDescriptionDialogOpen = false, isStarred = it.isStarred && it.description.isNotBlank()) }
 
-    /** Confirms the description dialog: keeps [text] (trimmed on save) and closes it. */
+    /**
+     * Confirms the description dialog: keeps [text] (trimmed on save) and closes it. Clearing the
+     * description takes the star off, since a starred record must have one.
+     */
     fun saveDescription(text: String) =
-        edit { it.copy(description = text.take(MAX_DESCRIPTION_LENGTH), isDescriptionDialogOpen = false) }
+        edit {
+            val description = text.take(MAX_DESCRIPTION_LENGTH)
+            it.copy(
+                description = description,
+                isDescriptionDialogOpen = false,
+                isStarred = it.isStarred && description.isNotBlank(),
+            )
+        }
+
+    /** Stars or unstars the expense; without a description, starring first asks for one. */
+    fun toggleStar() =
+        edit {
+            when {
+                !it.canStar -> it
+                it.isStarred -> it.copy(isStarred = false)
+                it.description.isBlank() -> it.copy(isStarred = true, isDescriptionDialogOpen = true)
+                else -> it.copy(isStarred = true)
+            }
+        }
 
     fun submit() {
         val current = state.value ?: return
@@ -194,6 +227,7 @@ class QuickEntryViewModel(
                     amountMinor = checkNotNull(current.amount.result),
                     date = current.date,
                     description = current.description,
+                    isStarred = current.isStarred && current.canStar,
                 )
             try {
                 val editing = current.editing

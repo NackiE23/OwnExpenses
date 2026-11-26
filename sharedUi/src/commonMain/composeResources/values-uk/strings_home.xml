@@ -14,6 +14,9 @@
     <string name="quick_entry_pick_date">Вибрати дату</string>
     <string name="quick_entry_add_description">Додати опис</string>
     <string name="quick_entry_description">Опис</string>
+    <string name="quick_entry_star">Позначити як визначну</string>
+    <string name="quick_entry_unstar">Зняти позначку визначної</string>
+    <string name="quick_entry_star_needs_description">Для визначної витрати потрібен опис</string>
     <string name="quick_entry_amount">Сума</string>
     <string name="quick_entry_plus">Плюс</string>
     <string name="quick_entry_minus">Мінус</string>

@@ -89,6 +89,7 @@ internal class RoomTransactionRepository(
                         categoryId = category.id,
                         date = input.date,
                         description = input.description.normalizeDescription(),
+                        isStarred = input.starredFor(category),
                         createdAt = now,
                         updatedAt = now,
                     ),
@@ -111,6 +112,7 @@ internal class RoomTransactionRepository(
                         categoryId = category.id,
                         date = input.date,
                         description = input.description.normalizeDescription(),
+                        isStarred = input.starredFor(category),
                         updatedAt = nextVersion(existing.updatedAt),
                         syncPending = true,
                     ),
@@ -155,5 +157,9 @@ internal class RoomTransactionRepository(
     private suspend fun requireCategory(id: Long): CategoryEntity =
         requireNotNull(categoryDao.getById(id)) { "Category $id not found" }
 }
+
+/** Only expenses carry the star (TransactionInput already guarantees the description). */
+private fun TransactionInput.starredFor(category: CategoryEntity): Boolean =
+    isStarred && category.type == TransactionType.EXPENSE
 
 private fun String?.normalizeDescription(): String? = this?.trim()?.takeIf { it.isNotEmpty() }

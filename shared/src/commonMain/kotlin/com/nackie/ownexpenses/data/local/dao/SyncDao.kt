@@ -21,6 +21,8 @@ internal data class PendingTransaction(
     val categorySyncId: String,
     val date: LocalDate,
     val description: String?,
+    @ColumnInfo(name = "is_starred")
+    val isStarred: Boolean,
     @ColumnInfo(name = "created_at")
     val createdAt: Long,
     @ColumnInfo(name = "updated_at")
@@ -57,7 +59,7 @@ internal interface SyncDao {
     @Query(
         """
         SELECT t.sync_id, t.type, t.amount_minor, c.sync_id AS category_sync_id, t.date, t.description,
-            t.created_at, t.updated_at
+            t.is_starred, t.created_at, t.updated_at
         FROM transactions t
         JOIN categories c ON c.id = t.category_id
         WHERE t.sync_pending = 1

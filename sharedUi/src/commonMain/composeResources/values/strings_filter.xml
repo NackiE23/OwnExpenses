@@ -3,6 +3,8 @@
     <string name="filter_search_hint">Search by description</string>
     <string name="filter_clear_search">Clear search</string>
     <string name="filter_open">Filter by categories</string>
+    <string name="filter_starred">Only notable expenses</string>
+    <string name="filter_starred_label">Notable</string>
     <string name="filter_title">Categories</string>
     <string name="filter_hint">Archived categories are included. Nothing selected means all categories.</string>
     <string name="filter_without_subcategory">Without subcategory</string>

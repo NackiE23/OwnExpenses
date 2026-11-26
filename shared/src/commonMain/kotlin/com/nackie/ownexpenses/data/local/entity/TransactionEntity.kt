@@ -45,6 +45,9 @@ data class TransactionEntity(
     /** Calendar date without time, so time zone changes never move a record between days. */
     val date: LocalDate,
     val description: String? = null,
+    /** Notable expense ("star"); always has a description, never set on incomes. */
+    @ColumnInfo(name = "is_starred", defaultValue = "0")
+    val isStarred: Boolean = false,
     /** Epoch milliseconds. */
     @ColumnInfo(name = "created_at")
     val createdAt: Long,

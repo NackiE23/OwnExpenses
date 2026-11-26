@@ -50,6 +50,8 @@ internal data class BackupTransaction(
     /** ISO-8601 calendar date. */
     val date: String,
     val description: String? = null,
+    /** Notable expense. Optional: backups made before stars have none. */
+    val starred: Boolean = false,
     /** Epoch milliseconds. */
     val createdAt: Long,
     /** Epoch milliseconds. */

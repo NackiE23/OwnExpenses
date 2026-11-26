@@ -26,6 +26,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -82,6 +84,8 @@ import com.nackie.ownexpenses.ui.resources.ic_chevron_left
 import com.nackie.ownexpenses.ui.resources.ic_chevron_right
 import com.nackie.ownexpenses.ui.resources.ic_delete
 import com.nackie.ownexpenses.ui.resources.ic_notes
+import com.nackie.ownexpenses.ui.resources.ic_star
+import com.nackie.ownexpenses.ui.resources.ic_star_outline
 import com.nackie.ownexpenses.ui.resources.quick_entry_add
 import com.nackie.ownexpenses.ui.resources.quick_entry_add_description
 import com.nackie.ownexpenses.ui.resources.quick_entry_amount
@@ -95,6 +99,10 @@ import com.nackie.ownexpenses.ui.resources.quick_entry_pick_date
 import com.nackie.ownexpenses.ui.resources.quick_entry_previous_day
 import com.nackie.ownexpenses.ui.resources.quick_entry_result
 import com.nackie.ownexpenses.ui.resources.quick_entry_save
+import com.nackie.ownexpenses.ui.resources.quick_entry_star
+import com.nackie.ownexpenses.ui.resources.quick_entry_star_needs_description
+import com.nackie.ownexpenses.ui.resources.quick_entry_unstar
+import com.nackie.ownexpenses.ui.theme.OwnExpensesTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.painterResource
@@ -134,6 +142,7 @@ internal fun QuickEntryHost(
             onOpenDescription = viewModel::openDescriptionDialog,
             onDismissDescription = viewModel::dismissDescriptionDialog,
             onSaveDescription = viewModel::saveDescription,
+            onToggleStar = viewModel::toggleStar,
             onSubmit = viewModel::submit,
             onDelete = viewModel::deleteEdited,
         )
@@ -142,7 +151,8 @@ internal fun QuickEntryHost(
 
 /**
  * Entry panel for adding (from a category tile) or editing a record. The keypad is live
- * immediately; subcategory, date and description are optional and never block saving.
+ * immediately; subcategory, date and description are optional and never block saving. The star
+ * (expenses only) is optional too, but a starred expense needs a description.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -158,6 +168,7 @@ private fun QuickEntrySheet(
     onOpenDescription: () -> Unit,
     onDismissDescription: () -> Unit,
     onSaveDescription: (String) -> Unit,
+    onToggleStar: () -> Unit,
     onSubmit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -178,7 +189,12 @@ private fun QuickEntrySheet(
         ) {
             if (state.isEditing) EditHeader(onDelete = onDelete)
             DateSelector(date = state.date, today = state.today, onShift = onShiftDate, onPick = onPickDate)
-            CategoryHeader(category = state.category, choices = state.categoryChoices, onSelect = onSelectCategory)
+            CategoryHeader(
+                category = state.category,
+                choices = state.categoryChoices,
+                onSelect = onSelectCategory,
+                star = if (state.canStar) StarToggle(state.isStarred, onToggleStar) else null,
+            )
             if (state.subcategories.isNotEmpty()) {
                 Row(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -210,7 +226,12 @@ private fun QuickEntrySheet(
         }
     }
     if (state.isDescriptionDialogOpen) {
-        DescriptionDialog(initialText = state.description, onDismiss = onDismissDescription, onSave = onSaveDescription)
+        DescriptionDialog(
+            initialText = state.description,
+            isRequired = state.isStarred,
+            onDismiss = onDismissDescription,
+            onSave = onSaveDescription,
+        )
     }
 }
 
@@ -342,12 +363,22 @@ private fun EditHeader(
     }
 }
 
-/** Category of the record; while editing it opens a menu of other categories of the same type. */
+/** State and action of the star button in the category header. */
+private class StarToggle(
+    val isStarred: Boolean,
+    val onToggle: () -> Unit,
+)
+
+/**
+ * Category of the record; while editing it opens a menu of other categories of the same type.
+ * [star] puts the notable-expense toggle at the end of the row (expenses only).
+ */
 @Composable
 private fun CategoryHeader(
     category: Category,
     choices: List<CategoryWithSubcategories>,
     onSelect: (Long) -> Unit,
+    star: StarToggle?,
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -384,6 +415,25 @@ private fun CategoryHeader(
                         expanded = false
                         onSelect(choice.category.id)
                     },
+                )
+            }
+        }
+        if (star != null) {
+            IconToggleButton(
+                checked = star.isStarred,
+                onCheckedChange = { star.onToggle() },
+                modifier = Modifier.align(Alignment.CenterEnd).testTag(UiTestTags.STAR_TOGGLE),
+            ) {
+                Icon(
+                    painter =
+                        painterResource(
+                            if (star.isStarred) Res.drawable.ic_star else Res.drawable.ic_star_outline,
+                        ),
+                    contentDescription =
+                        stringResource(
+                            if (star.isStarred) Res.string.quick_entry_unstar else Res.string.quick_entry_star,
+                        ),
+                    tint = if (star.isStarred) OwnExpensesTheme.moneyColors.star else LocalContentColor.current,
                 )
             }
         }
@@ -427,11 +477,13 @@ private fun DescriptionLine(
 
 /**
  * Description editor opened from the keypad. The field takes focus as soon as the dialog window
- * does, so the system keyboard is up without another tap.
+ * does, so the system keyboard is up without another tap. [isRequired] (a starred expense) says
+ * under the field that the description is needed; leaving it empty takes the star off.
  */
 @Composable
 private fun DescriptionDialog(
     initialText: String,
+    isRequired: Boolean,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
 ) {
@@ -453,6 +505,12 @@ private fun DescriptionDialog(
                 value = value,
                 onValueChange = { value = it },
                 placeholder = { Text(stringResource(Res.string.quick_entry_add_description)) },
+                supportingText =
+                    if (isRequired) {
+                        { Text(stringResource(Res.string.quick_entry_star_needs_description)) }
+                    } else {
+                        null
+                    },
                 singleLine = true,
                 keyboardOptions =
                     KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
